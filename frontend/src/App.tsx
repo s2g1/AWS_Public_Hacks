@@ -4,6 +4,7 @@ import Dashboard from './pages/Dashboard'
 import Payments from './pages/Payments'
 import Upload from './pages/Upload'
 import Contracts from './pages/Contracts'
+import Solicitations from './pages/Solicitations'
 import Alerts from './pages/Alerts'
 import Correspondence from './pages/Correspondence'
 import ChatWidget from './components/ChatWidget'
@@ -17,6 +18,7 @@ function App() {
           <Route path="/payments" element={<Payments />} />
           <Route path="/upload" element={<Upload />} />
           <Route path="/contracts" element={<Contracts />} />
+          <Route path="/solicitations" element={<Solicitations />} />
           <Route path="/alerts" element={<Alerts />} />
           <Route path="/correspondence" element={<Correspondence />} />
         </Routes>
