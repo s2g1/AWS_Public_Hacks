@@ -251,7 +251,7 @@ This implementation plan breaks down the Federal Payment Processing Platform int
     - GREEN: otherwise
     - _Requirements: 17.3, 17.4, 17.5, 17.6, 17.7_
 
-  - [~] 11.3 Write property test for variance calculation correctness
+  - [x] 11.3 Write property test for variance calculation correctness
     - **Property 17: Variance Calculation Correctness**
     - **Validates: Requirements 17.1, 17.2**
 
@@ -264,7 +264,7 @@ This implementation plan breaks down the Federal Payment Processing Platform int
     - **Validates: Requirement 17.8**
 
 - [ ] 12. Implement REA Workflow Management
-  - [~] 12.1 Implement REA submission and validation
+  - [x] 12.1 Implement REA submission and validation
     - Validate requested amount is positive
     - Validate at least one affected CLIN specified
     - Validate all referenced CLINs exist on contract
@@ -272,7 +272,7 @@ This implementation plan breaks down the Federal Payment Processing Platform int
     - Notify government CO and log audit trail
     - _Requirements: 18.1, 18.2_
 
-  - [~] 12.2 Implement REA response handling (approve, partial, deny, info request)
+  - [x] 12.2 Implement REA response handling (approve, partial, deny, info request)
     - APPROVED: create contract modification, adjust CLIN ceilings by approved amount
     - PARTIALLY_APPROVED: create modification for partial amount, adjust CLINs
     - DENIED: record rationale, set status DENIED
@@ -288,7 +288,7 @@ This implementation plan breaks down the Federal Payment Processing Platform int
     - **Validates: Requirements 18.3, 18.4**
 
 - [ ] 13. Implement Option Exercise and Obligation Management
-  - [~] 13.1 Implement option exercise with validation
+  - [x] 13.1 Implement option exercise with validation
     - Verify CLIN is an option and in ACTIVE status
     - Verify exercise deadline has not passed
     - Verify new total obligation does not exceed contract ceiling
@@ -311,7 +311,7 @@ This implementation plan breaks down the Federal Payment Processing Platform int
     - **Validates: Requirements 22.1, 22.2**
 
 - [ ] 14. Implement Role-Based Access Control
-  - [~] 14.1 Implement RBAC enforcement for portal access
+  - [x] 14.1 Implement RBAC enforcement for portal access
     - CO: view all contracts in portfolio, perform REA response, option exercise, obligation management
     - PCO: view own organization contracts, submit REAs, update EAC, submit invoices
     - Deny contractor access to non-associated contracts
@@ -366,15 +366,15 @@ This implementation plan breaks down the Federal Payment Processing Platform int
     - **Property 26: File Upload Validation**
     - **Validates: Requirement 24.5**
 
-- [ ] 18. Implement Frontend - Real-Time Updates and Payment Pipeline View
-  - [~] 18.1 Implement WebSocket connection for real-time updates
+- [x] 18. Implement Frontend - Real-Time Updates and Payment Pipeline View
+  - [x] 18.1 Implement WebSocket connection for real-time updates
     - Connect to API Gateway WebSocket endpoint
     - Handle message types: STATUS_CHANGE, AGENT_RESULT, ESCALATION, COMPLETE
     - Update pipeline visualization in real-time on status changes
     - Push escalation notifications to appropriate reviewers
     - _Requirements: 25.1, 25.2, 25.3, 25.4_
 
-  - [~] 18.2 Implement payment pipeline tracker and activity feed
+  - [x] 18.2 Implement payment pipeline tracker and activity feed
     - Horizontal step visualization showing agent progress
     - Agent activity feed appending results in real-time
     - Payment detail view with document preview, extraction results, decision timeline
