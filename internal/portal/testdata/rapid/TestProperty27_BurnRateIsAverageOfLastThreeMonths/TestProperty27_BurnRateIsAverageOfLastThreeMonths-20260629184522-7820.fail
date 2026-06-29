@@ -1,0 +1,31 @@
+# 2026/06/29 18:45:22.798847 [TestProperty27_BurnRateIsAverageOfLastThreeMonths] [rapid] draw length: 3
+# 2026/06/29 18:45:22.798847 [TestProperty27_BurnRateIsAverageOfLastThreeMonths] [rapid] draw expenditure: 1.000000000000007
+# 2026/06/29 18:45:22.798847 [TestProperty27_BurnRateIsAverageOfLastThreeMonths] [rapid] draw expenditure: 1
+# 2026/06/29 18:45:22.798847 [TestProperty27_BurnRateIsAverageOfLastThreeMonths] [rapid] draw expenditure: 31.000000000000004
+# 2026/06/29 18:45:22.798847 [TestProperty27_BurnRateIsAverageOfLastThreeMonths] burn rate mismatch: got 11.000000, expected average of last 3 months = 11.000000 (values: 1.000000, 1.000000, 31.000000)
+# 
+v0.4.8#8294479382537598259
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x2f
+0x20
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x6b74f03291620
+0x4
+0xf
+0x30
+0x1

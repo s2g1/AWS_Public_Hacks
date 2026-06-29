@@ -1,0 +1,35 @@
+# 2026/06/29 18:45:44.742561 [TestProperty18_NoRiskIndicatorsAlwaysGreen] [rapid] draw ceiling: 1153.5
+# 2026/06/29 18:45:44.742561 [TestProperty18_NoRiskIndicatorsAlwaysGreen] [rapid] draw expended: 1038.15
+# 2026/06/29 18:45:44.742561 [TestProperty18_NoRiskIndicatorsAlwaysGreen] [rapid] draw obligated: 1000
+# 2026/06/29 18:45:44.742561 [TestProperty18_NoRiskIndicatorsAlwaysGreen] [rapid] draw eac: 800.1
+# 2026/06/29 18:45:44.742561 [TestProperty18_NoRiskIndicatorsAlwaysGreen] expected GREEN for no-risk CLIN (ceiling=1153.500000, expended=1038.150000, obligated=1000.000000, eac=800.100000, ratio=0.9000, underRun%=19.99), got YELLOW
+# 
+v0.4.8#18094592371173513212
+0x0
+0x0
+0x0
+0x1
+0x81
+0x1
+0x20000000000
+0x0
+0x0
+0x1f2b5a0e61c3a6
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0

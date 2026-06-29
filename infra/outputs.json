@@ -1,0 +1,6 @@
+{
+  "InfraStack": {
+    "BucketName": "fedpay-portal-361274344489-us-east-1",
+    "DistributionDomainName": "https://d2wbk4dmt2edww.cloudfront.net"
+  }
+}

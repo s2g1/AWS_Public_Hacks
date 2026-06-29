@@ -1,0 +1,35 @@
+# 2026/06/29 18:45:44.712447 [TestProperty18_UnderRun20To40PctAtLeastYellow] [rapid] draw obligated: 1000.5
+# 2026/06/29 18:45:44.712447 [TestProperty18_UnderRun20To40PctAtLeastYellow] [rapid] draw underRunPct: 20
+# 2026/06/29 18:45:44.712447 [TestProperty18_UnderRun20To40PctAtLeastYellow] [rapid] draw ceiling: 1e+06
+# 2026/06/29 18:45:44.712447 [TestProperty18_UnderRun20To40PctAtLeastYellow] [rapid] draw expended: 1
+# 2026/06/29 18:45:44.712447 [TestProperty18_UnderRun20To40PctAtLeastYellow] expected at least YELLOW for under-run pct=20.00% (obligated=1000.500000, eac=800.400000), got GREEN
+# 
+v0.4.8#13525331358218986974
+0x0
+0x0
+0x38e38e38e38e4
+0x0
+0x0
+0x1
+0x40000000000
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0

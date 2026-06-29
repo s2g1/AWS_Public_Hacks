@@ -237,7 +237,7 @@ This implementation plan breaks down the Federal Payment Processing Platform int
     - **Property 16: Financial Data Consistency Across Roles**
     - **Validates: Requirement 16.3**
 
-- [ ] 11. Implement Variance Analysis and Risk Detection
+- [x] 11. Implement Variance Analysis and Risk Detection
   - [x] 11.1 Implement variance calculation algorithm
     - Compute overrun: max(0, expended - ceiling)
     - Compute under-run: max(0, obligated - EAC)
@@ -255,11 +255,11 @@ This implementation plan breaks down the Federal Payment Processing Platform int
     - **Property 17: Variance Calculation Correctness**
     - **Validates: Requirements 17.1, 17.2**
 
-  - [~] 11.4 Write property test for risk level determination
+  - [x] 11.4 Write property test for risk level determination
     - **Property 18: Risk Level Determination**
     - **Validates: Requirements 17.3, 17.4, 17.5, 17.6, 17.7**
 
-  - [~] 11.5 Write property test for burn rate calculation
+  - [x] 11.5 Write property test for burn rate calculation
     - **Property 27: Burn Rate Calculation**
     - **Validates: Requirement 17.8**
 
@@ -279,7 +279,7 @@ This implementation plan breaks down the Federal Payment Processing Platform int
     - ADDITIONAL_INFO_REQUESTED: set status without resolved date
     - _Requirements: 18.3, 18.4, 18.5, 18.6_
 
-  - [~] 12.3 Write property test for REA validation rules
+  - [x] 12.3 Write property test for REA validation rules
     - **Property 20: REA Validation Rules**
     - **Validates: Requirement 18.1**
 
@@ -296,13 +296,13 @@ This implementation plan breaks down the Federal Payment Processing Platform int
     - Create contract modification and notify contractor
     - _Requirements: 19.1, 19.2, 19.3, 19.4_
 
-  - [~] 13.2 Implement obligation integrity enforcement
+  - [x] 13.2 Implement obligation integrity enforcement
     - Enforce total contract obligations never exceed total ceiling
     - Enforce CLIN expenditures never exceed CLIN obligations without authorization
     - Hold payments and notify CO when expenditure would exceed CLIN obligation
     - _Requirements: 22.1, 22.2, 22.3_
 
-  - [~] 13.3 Write property test for option exercise constraints
+  - [x] 13.3 Write property test for option exercise constraints
     - **Property 22: Option Exercise Constraints**
     - **Validates: Requirements 19.1, 19.2, 19.3**
 
@@ -310,7 +310,7 @@ This implementation plan breaks down the Federal Payment Processing Platform int
     - **Property 19: Obligation Cannot Exceed Ceiling**
     - **Validates: Requirements 22.1, 22.2**
 
-- [ ] 14. Implement Role-Based Access Control
+- [x] 14. Implement Role-Based Access Control
   - [x] 14.1 Implement RBAC enforcement for portal access
     - CO: view all contracts in portfolio, perform REA response, option exercise, obligation management
     - PCO: view own organization contracts, submit REAs, update EAC, submit invoices
@@ -318,12 +318,12 @@ This implementation plan breaks down the Federal Payment Processing Platform int
     - Deny actions outside role permissions
     - _Requirements: 20.1, 20.2, 20.3, 20.4_
 
-  - [~] 14.2 Write property test for role-based access enforcement
+  - [x] 14.2 Write property test for role-based access enforcement
     - **Property 23: Role-Based Access Enforcement**
     - **Validates: Requirements 20.3, 20.4**
 
 - [ ] 15. Implement SBIR Payment Processing Integration
-  - [~] 15.1 Implement SBIR invoice validation against CLIN obligations
+  - [x] 15.1 Implement SBIR invoice validation against CLIN obligations
     - Verify referenced CLIN is in ACTIVE or EXERCISED status
     - Hold payment if invoice amount would cause CLIN expenditure to exceed obligation
     - For CPFF/CPIF: verify cost allowability before approval
@@ -382,7 +382,7 @@ This implementation plan breaks down the Federal Payment Processing Platform int
     - _Requirements: 25.1, 25.2_
 
 - [ ] 19. Implement Frontend - Contract Financial Portal Views
-  - [~] 19.1 Implement contract financial dashboard
+  - [x] 19.1 Implement contract financial dashboard
     - Display contract-level financials: ceiling, obligated, expended, EAC
     - Display CLIN-level financials in expandable table/accordion
     - Color-coded risk indicators (RED/YELLOW/GREEN)
