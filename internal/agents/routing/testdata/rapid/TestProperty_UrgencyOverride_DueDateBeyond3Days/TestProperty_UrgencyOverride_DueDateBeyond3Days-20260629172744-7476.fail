@@ -1,0 +1,11 @@
+# 2026/06/29 17:27:44.254803 [TestProperty_UrgencyOverride_DueDateBeyond3Days] [rapid] draw amount: 0.01
+# 2026/06/29 17:27:44.254803 [TestProperty_UrgencyOverride_DueDateBeyond3Days] [rapid] draw daysUntilDue: 4
+# 2026/06/29 17:27:44.254803 [TestProperty_UrgencyOverride_DueDateBeyond3Days] amount 0.01 with due date 2025-06-19 (4 days from now): expected non-URGENT priority (amount <= $1M), got URGENT
+# 
+v0.4.8#15516936483870211486
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
