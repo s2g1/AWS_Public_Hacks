@@ -263,7 +263,7 @@ This implementation plan breaks down the Federal Payment Processing Platform int
     - **Property 27: Burn Rate Calculation**
     - **Validates: Requirement 17.8**
 
-- [ ] 12. Implement REA Workflow Management
+- [x] 12. Implement REA Workflow Management
   - [x] 12.1 Implement REA submission and validation
     - Validate requested amount is positive
     - Validate at least one affected CLIN specified
@@ -283,11 +283,11 @@ This implementation plan breaks down the Federal Payment Processing Platform int
     - **Property 20: REA Validation Rules**
     - **Validates: Requirement 18.1**
 
-  - [~] 12.4 Write property test for REA approval adjusts ceilings
+  - [x] 12.4 Write property test for REA approval adjusts ceilings
     - **Property 21: REA Approval Adjusts Ceilings**
     - **Validates: Requirements 18.3, 18.4**
 
-- [ ] 13. Implement Option Exercise and Obligation Management
+- [x] 13. Implement Option Exercise and Obligation Management
   - [x] 13.1 Implement option exercise with validation
     - Verify CLIN is an option and in ACTIVE status
     - Verify exercise deadline has not passed
@@ -306,7 +306,7 @@ This implementation plan breaks down the Federal Payment Processing Platform int
     - **Property 22: Option Exercise Constraints**
     - **Validates: Requirements 19.1, 19.2, 19.3**
 
-  - [~] 13.4 Write property test for obligation cannot exceed ceiling
+  - [x] 13.4 Write property test for obligation cannot exceed ceiling
     - **Property 19: Obligation Cannot Exceed Ceiling**
     - **Validates: Requirements 22.1, 22.2**
 
@@ -322,7 +322,7 @@ This implementation plan breaks down the Federal Payment Processing Platform int
     - **Property 23: Role-Based Access Enforcement**
     - **Validates: Requirements 20.3, 20.4**
 
-- [ ] 15. Implement SBIR Payment Processing Integration
+- [x] 15. Implement SBIR Payment Processing Integration
   - [x] 15.1 Implement SBIR invoice validation against CLIN obligations
     - Verify referenced CLIN is in ACTIVE or EXERCISED status
     - Hold payment if invoice amount would cause CLIN expenditure to exceed obligation
@@ -330,11 +330,11 @@ This implementation plan breaks down the Federal Payment Processing Platform int
     - For FFP: verify associated milestone accepted before approval
     - _Requirements: 21.1, 21.2, 21.3, 21.4_
 
-  - [~] 15.2 Write property test for SBIR CLIN status gate
+  - [x] 15.2 Write property test for SBIR CLIN status gate
     - **Property 24: SBIR CLIN Status Gate**
     - **Validates: Requirements 21.1, 21.4**
 
-  - [~] 15.3 Write property test for SBIR expenditure ceiling enforcement
+  - [x] 15.3 Write property test for SBIR expenditure ceiling enforcement
     - **Property 25: SBIR Expenditure Ceiling Enforcement**
     - **Validates: Requirements 21.2, 22.3**
 
@@ -389,20 +389,20 @@ This implementation plan breaks down the Federal Payment Processing Platform int
     - Burn rate sparkline charts using Recharts
     - _Requirements: 16.1, 16.2, 17.3, 17.4, 17.5, 17.6, 17.7, 17.8_
 
-  - [~] 19.2 Implement REA management views
+  - [x] 19.2 Implement REA management views
     - Contractor: REA submission form with validation
     - Government: REA review and response workflow
     - Status badges, audit trail display
     - _Requirements: 18.1, 18.2, 18.3, 18.4, 18.5, 18.6_
 
-  - [~] 19.3 Implement option exercise and obligation views
+  - [x] 19.3 Implement option exercise and obligation views
     - Option exercise interface with constraint validation feedback
     - Obligation tracking with ceiling enforcement indicators
     - Contract modification history
     - _Requirements: 19.1, 19.2, 19.3, 19.4, 22.1, 22.2_
 
 - [ ] 20. Implement Infrastructure as Code (AWS CDK)
-  - [~] 20.1 Set up AWS CDK stack with core infrastructure
+  - [x] 20.1 Set up AWS CDK stack with core infrastructure
     - VPC with private subnets and VPC endpoints (S3, DynamoDB, Bedrock)
     - DynamoDB tables: payments (with GSIs for status-index, payee-index), contracts, CLINs, REAs
     - S3 buckets: document ingestion (with event notification), static website hosting
