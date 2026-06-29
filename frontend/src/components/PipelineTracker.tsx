@@ -13,17 +13,39 @@ const PIPELINE_STAGES: { id: string; label: string; statuses: string[] }[] = [
   { id: 'disbursement', label: 'Disbursement', statuses: ['DISBURSING', 'DISBURSED'] },
 ]
 
+/** Ingestion channel type */
+type IngestionChannel = 'EMAIL' | 'FAX' | 'MAIL' | 'PORTAL'
+
+/** Channel badge color mapping */
+const CHANNEL_STYLES: Record<IngestionChannel, string> = {
+  EMAIL: 'bg-blue-100 text-blue-800',
+  FAX: 'bg-purple-100 text-purple-800',
+  MAIL: 'bg-amber-100 text-amber-800',
+  PORTAL: 'bg-green-100 text-green-800',
+}
+
+/** Channel badge icons */
+const CHANNEL_ICONS: Record<IngestionChannel, string> = {
+  EMAIL: '📧',
+  FAX: '📠',
+  MAIL: '📬',
+  PORTAL: '🌐',
+}
+
 interface PipelineTrackerProps {
   messages: WebSocketMessage[]
+  /** The ingestion channel source for this payment */
+  channel?: IngestionChannel
 }
 
 /**
  * Horizontal step visualization showing agent progress stages.
  * Each step lights up as real-time WebSocket events arrive.
+ * Displays a channel badge showing the ingestion source (EMAIL/FAX/MAIL/PORTAL).
  *
- * Validates: Requirements 25.1, 25.2
+ * Validates: Requirements 25.1, 25.2, 24.3
  */
-export function PipelineTracker({ messages }: PipelineTrackerProps) {
+export function PipelineTracker({ messages, channel }: PipelineTrackerProps) {
   const activeStageIndex = useMemo(() => {
     // Find the furthest stage reached by examining STATUS_CHANGE messages
     let maxIndex = -1
@@ -46,7 +68,10 @@ export function PipelineTracker({ messages }: PipelineTrackerProps) {
 
   return (
     <div className="w-full rounded-lg border border-gray-200 bg-white p-4 sm:p-6">
-      <h2 className="mb-4 text-lg font-semibold text-gray-900">Pipeline Progress</h2>
+      <div className="mb-4 flex items-center justify-between">
+        <h2 className="text-lg font-semibold text-gray-900">Pipeline Progress</h2>
+        {channel && <ChannelBadge channel={channel} />}
+      </div>
       <div className="flex items-center justify-between">
         {PIPELINE_STAGES.map((stage, index) => {
           const isCompleted = index < activeStageIndex
@@ -106,5 +131,21 @@ export function PipelineTracker({ messages }: PipelineTrackerProps) {
         })}
       </div>
     </div>
+  )
+}
+
+/** Badge component displaying the ingestion channel source */
+function ChannelBadge({ channel }: { channel: IngestionChannel }) {
+  const style = CHANNEL_STYLES[channel] || 'bg-gray-100 text-gray-800'
+  const icon = CHANNEL_ICONS[channel] || '📄'
+
+  return (
+    <span
+      className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium ${style}`}
+      aria-label={`Ingestion channel: ${channel}`}
+    >
+      <span aria-hidden="true">{icon}</span>
+      {channel}
+    </span>
   )
 }

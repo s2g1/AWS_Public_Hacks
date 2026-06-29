@@ -5,6 +5,7 @@ import Payments from './pages/Payments'
 import Upload from './pages/Upload'
 import Contracts from './pages/Contracts'
 import Alerts from './pages/Alerts'
+import Correspondence from './pages/Correspondence'
 import ChatWidget from './components/ChatWidget'
 
 function App() {
@@ -17,6 +18,7 @@ function App() {
           <Route path="/upload" element={<Upload />} />
           <Route path="/contracts" element={<Contracts />} />
           <Route path="/alerts" element={<Alerts />} />
+          <Route path="/correspondence" element={<Correspondence />} />
         </Routes>
       </MainLayout>
       <ChatWidget />

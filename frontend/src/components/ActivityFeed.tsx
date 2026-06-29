@@ -50,7 +50,12 @@ function ActivityItem({ message }: { message: WebSocketMessage }) {
             <span className="text-sm font-semibold text-blue-800">
               {message.agentName}
             </span>
-            <ConfidenceBadge confidence={message.confidence} />
+            <div className="flex items-center gap-1.5">
+              {message.result && message.result.toLowerCase().includes('handwriting') && (
+                <span className="text-base" title="Handwriting detected" aria-label="Handwriting detected">✍️</span>
+              )}
+              <ConfidenceBadge confidence={message.confidence} />
+            </div>
           </div>
           <p className="mt-1 text-sm text-blue-700">{message.result}</p>
           <p className="mt-1 text-xs text-blue-500">Payment: {message.paymentId}</p>

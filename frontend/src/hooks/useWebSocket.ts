@@ -134,16 +134,16 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
 
     const samplePaymentId = 'demo-payment-001'
     const stages: WebSocketMessage[] = [
-      { type: 'STATUS_CHANGE', paymentId: samplePaymentId, previousStatus: 'RECEIVED', newStatus: 'EXTRACTING', timestamp: new Date().toISOString() },
-      { type: 'AGENT_RESULT', paymentId: samplePaymentId, agentName: 'OCR/Extraction', result: 'Document classified as INVOICE. 8 fields extracted.', confidence: 0.92 },
-      { type: 'STATUS_CHANGE', paymentId: samplePaymentId, previousStatus: 'EXTRACTING', newStatus: 'VALIDATING', timestamp: new Date().toISOString() },
-      { type: 'AGENT_RESULT', paymentId: samplePaymentId, agentName: 'Validation', result: 'All required fields present. No duplicates detected.', confidence: 0.95 },
-      { type: 'STATUS_CHANGE', paymentId: samplePaymentId, previousStatus: 'VALIDATING', newStatus: 'CHECKING_COMPLIANCE', timestamp: new Date().toISOString() },
-      { type: 'AGENT_RESULT', paymentId: samplePaymentId, agentName: 'Compliance', result: 'OFAC clear. FAR compliant. No threshold exceeded.', confidence: 0.98 },
-      { type: 'STATUS_CHANGE', paymentId: samplePaymentId, previousStatus: 'CHECKING_COMPLIANCE', newStatus: 'ROUTING', timestamp: new Date().toISOString() },
-      { type: 'AGENT_RESULT', paymentId: samplePaymentId, agentName: 'Routing', result: 'Routed to SUPERVISOR level. Priority: NORMAL.', confidence: 0.99 },
-      { type: 'STATUS_CHANGE', paymentId: samplePaymentId, previousStatus: 'ROUTING', newStatus: 'DISBURSING', timestamp: new Date().toISOString() },
-      { type: 'COMPLETE', paymentId: samplePaymentId, finalStatus: 'DISBURSED' },
+      { type: 'STATUS_CHANGE', paymentId: samplePaymentId, previousStatus: 'RECEIVED', newStatus: 'EXTRACTING', timestamp: new Date().toISOString(), channel: 'EMAIL' },
+      { type: 'AGENT_RESULT', paymentId: samplePaymentId, agentName: 'OCR/Extraction', result: 'Document classified as INVOICE. 8 fields extracted.', confidence: 0.92, channel: 'EMAIL' },
+      { type: 'STATUS_CHANGE', paymentId: samplePaymentId, previousStatus: 'EXTRACTING', newStatus: 'VALIDATING', timestamp: new Date().toISOString(), channel: 'EMAIL' },
+      { type: 'AGENT_RESULT', paymentId: samplePaymentId, agentName: 'Validation', result: 'All required fields present. No duplicates detected.', confidence: 0.95, channel: 'EMAIL' },
+      { type: 'STATUS_CHANGE', paymentId: samplePaymentId, previousStatus: 'VALIDATING', newStatus: 'CHECKING_COMPLIANCE', timestamp: new Date().toISOString(), channel: 'EMAIL' },
+      { type: 'AGENT_RESULT', paymentId: samplePaymentId, agentName: 'Compliance', result: 'OFAC clear. FAR compliant. No threshold exceeded.', confidence: 0.98, channel: 'EMAIL' },
+      { type: 'STATUS_CHANGE', paymentId: samplePaymentId, previousStatus: 'CHECKING_COMPLIANCE', newStatus: 'ROUTING', timestamp: new Date().toISOString(), channel: 'EMAIL' },
+      { type: 'AGENT_RESULT', paymentId: samplePaymentId, agentName: 'Routing', result: 'Routed to SUPERVISOR level. Priority: NORMAL.', confidence: 0.99, channel: 'EMAIL' },
+      { type: 'STATUS_CHANGE', paymentId: samplePaymentId, previousStatus: 'ROUTING', newStatus: 'DISBURSING', timestamp: new Date().toISOString(), channel: 'EMAIL' },
+      { type: 'COMPLETE', paymentId: samplePaymentId, finalStatus: 'DISBURSED', channel: 'EMAIL' },
     ]
 
     let index = 0
@@ -155,9 +155,9 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
         // Restart simulation loop with escalation scenario
         index = 0
         const escalationStages: WebSocketMessage[] = [
-          { type: 'STATUS_CHANGE', paymentId: 'demo-payment-002', previousStatus: 'RECEIVED', newStatus: 'EXTRACTING', timestamp: new Date().toISOString() },
-          { type: 'AGENT_RESULT', paymentId: 'demo-payment-002', agentName: 'OCR/Extraction', result: 'Low confidence extraction. Multiple fields uncertain.', confidence: 0.62 },
-          { type: 'ESCALATION', paymentId: 'demo-payment-002', reason: 'Extraction confidence below threshold (0.62 < 0.75)', agentName: 'OCR/Extraction' },
+          { type: 'STATUS_CHANGE', paymentId: 'demo-payment-002', previousStatus: 'RECEIVED', newStatus: 'EXTRACTING', timestamp: new Date().toISOString(), channel: 'FAX' },
+          { type: 'AGENT_RESULT', paymentId: 'demo-payment-002', agentName: 'OCR/Extraction', result: 'Low confidence extraction. Multiple fields uncertain.', confidence: 0.62, channel: 'FAX' },
+          { type: 'ESCALATION', paymentId: 'demo-payment-002', reason: 'Extraction confidence below threshold (0.62 < 0.75)', agentName: 'OCR/Extraction', channel: 'FAX' },
         ]
         escalationStages.forEach((msg) => handleIncomingMessage(msg))
         if (simulationIntervalRef.current) {

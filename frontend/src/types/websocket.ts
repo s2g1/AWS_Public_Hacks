@@ -9,12 +9,15 @@ export type WebSocketMessageType =
   | 'ESCALATION'
   | 'COMPLETE'
 
+export type IngestionChannel = 'EMAIL' | 'FAX' | 'MAIL' | 'PORTAL'
+
 export interface StatusChangeEvent {
   type: 'STATUS_CHANGE'
   paymentId: string
   previousStatus: string
   newStatus: string
   timestamp: string
+  channel?: IngestionChannel
 }
 
 export interface AgentResultEvent {
@@ -23,6 +26,7 @@ export interface AgentResultEvent {
   agentName: string
   result: string
   confidence: number
+  channel?: IngestionChannel
 }
 
 export interface EscalationEvent {
@@ -30,12 +34,14 @@ export interface EscalationEvent {
   paymentId: string
   reason: string
   agentName: string
+  channel?: IngestionChannel
 }
 
 export interface CompleteEvent {
   type: 'COMPLETE'
   paymentId: string
   finalStatus: string
+  channel?: IngestionChannel
 }
 
 export type WebSocketMessage =
