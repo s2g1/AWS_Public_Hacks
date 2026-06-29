@@ -311,3 +311,54 @@ The platform also includes a Contract Financial Management Portal providing a un
 2. WHEN an agent produces a result, THE Platform SHALL append the result to the real-time activity feed for the associated payment
 3. WHEN a payment requires escalation, THE Platform SHALL push an escalation notification to the appropriate reviewer in real-time
 4. WHEN a payment reaches a terminal status, THE Platform SHALL push a completion notification to connected clients
+
+
+### Requirement 26: Data Exploration and Tutorial Chatbot
+
+**User Story:** As a government or contractor user, I want an AI-powered chatbot that can answer questions about how to use the application and provide specifics about my data, so that I can self-serve without reading documentation.
+
+#### Acceptance Criteria
+
+1. THE Platform SHALL provide a chatbot accessible from any page via a floating chat widget
+2. WHEN a user asks about application features, THE chatbot SHALL provide contextual help about the current page and its functionality
+3. WHEN a user asks about their data (e.g., "what's my contract ceiling?", "how many payments are pending?"), THE chatbot SHALL query the relevant data and provide accurate answers
+4. THE chatbot SHALL use Amazon Bedrock (Claude) for natural language understanding and response generation
+5. THE chatbot SHALL maintain conversation context within a session
+6. THE chatbot SHALL NOT expose data from contracts the user doesn't have access to (respects RBAC)
+
+### Requirement 27: Multichannel Document Ingestion
+
+**User Story:** As a payment processor, I want documents to be accepted from multiple channels (mail, fax, email, portal upload), so that all payment documentation enters the processing pipeline regardless of submission method.
+
+#### Acceptance Criteria
+
+1. WHEN a document arrives via email attachment, THE Platform SHALL automatically extract the attachment and submit it to the ingestion pipeline
+2. WHEN a scanned fax is received, THE Platform SHALL treat it as a document upload and initiate processing
+3. WHEN physical mail is digitized through a scanning station, THE Platform SHALL accept the scanned image for processing
+4. THE Platform SHALL tag each ingested document with its source channel (EMAIL, FAX, MAIL, PORTAL)
+5. THE Platform SHALL display the ingestion channel in the payment detail view
+6. WHEN a document is received from any channel, THE Platform SHALL apply the same classification and extraction pipeline
+
+### Requirement 28: Handwriting Recognition
+
+**User Story:** As a document processor, I want handwritten content on payment forms to be recognized and extracted, so that hand-filled forms can be processed without manual transcription.
+
+#### Acceptance Criteria
+
+1. WHEN the OCR_Agent processes a document containing handwritten text, THE OCR_Agent SHALL use Amazon Textract or Bedrock multimodal for handwriting recognition
+2. WHEN handwritten fields are detected, THE OCR_Agent SHALL assign lower confidence scores compared to printed text
+3. WHEN handwriting confidence is below the HANDWRITING_THRESHOLD (0.65), THE Platform SHALL flag the field for human verification
+4. THE Platform SHALL support mixed documents containing both printed and handwritten content
+
+### Requirement 29: Automated Notification and Correspondence Generation
+
+**User Story:** As a contracting officer, I want the system to automatically generate notification letters and correspondence for payment actions, so that stakeholders are informed promptly without manual drafting.
+
+#### Acceptance Criteria
+
+1. WHEN a payment is approved, THE Platform SHALL generate a confirmation letter to the payee using Amazon Bedrock
+2. WHEN a payment is rejected, THE Platform SHALL generate a denial letter with specific reasons and next steps
+3. WHEN an REA response is issued, THE Platform SHALL generate formal correspondence to the contractor
+4. WHEN a payment is escalated, THE Platform SHALL generate an escalation notification to the appropriate reviewer
+5. THE Platform SHALL support multiple output formats (email body, PDF letter, portal notification)
+6. THE Platform SHALL allow human review of generated correspondence before sending

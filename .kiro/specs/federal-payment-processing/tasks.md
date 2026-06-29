@@ -64,7 +64,7 @@ This implementation plan breaks down the Federal Payment Processing Platform int
     - **Property 4: Confidence Threshold Escalation**
     - **Validates: Requirements 2.1, 2.2**
 
-- [~] 3. Checkpoint - Ensure all tests pass
+- [x] 3. Checkpoint - Ensure all tests pass
   - Ensure all tests pass, ask the user if questions arise.
 
 - [x] 4. Implement Validation Agent
@@ -212,7 +212,7 @@ This implementation plan breaks down the Federal Payment Processing Platform int
     - **Property 14: Exponential Backoff Bounds**
     - **Validates: Requirement 15.2**
 
-- [~] 9. Checkpoint - Ensure all agent tests pass
+- [x] 9. Checkpoint - Ensure all agent tests pass
   - Ensure all tests pass, ask the user if questions arise.
 
 - [x] 10. Implement Contract Financial Management Portal - Data Layer
@@ -338,7 +338,7 @@ This implementation plan breaks down the Federal Payment Processing Platform int
     - **Property 25: SBIR Expenditure Ceiling Enforcement**
     - **Validates: Requirements 21.2, 22.3**
 
-- [~] 16. Checkpoint - Ensure all backend and portal logic tests pass
+- [x] 16. Checkpoint - Ensure all backend and portal logic tests pass
   - Ensure all tests pass, ask the user if questions arise.
 
 - [x] 17. Implement Frontend - Responsive UI Shell and Document Upload
@@ -401,7 +401,7 @@ This implementation plan breaks down the Federal Payment Processing Platform int
     - Contract modification history
     - _Requirements: 19.1, 19.2, 19.3, 19.4, 22.1, 22.2_
 
-- [ ] 20. Implement Infrastructure as Code (AWS CDK)
+- [x] 20. Implement Infrastructure as Code (AWS CDK)
   - [x] 20.1 Set up AWS CDK stack with core infrastructure
     - VPC with private subnets and VPC endpoints (S3, DynamoDB, Bedrock)
     - DynamoDB tables: payments (with GSIs for status-index, payee-index), contracts, CLINs, REAs
@@ -409,36 +409,36 @@ This implementation plan breaks down the Federal Payment Processing Platform int
     - IAM roles scoped per agent Lambda (least privilege)
     - _Requirements: 1.1, 13.1, 14.1_
 
-  - [~] 20.2 Deploy Lambda functions and Step Functions workflow
+  - [x] 20.2 Deploy Lambda functions and Step Functions workflow
     - Lambda functions for each agent (extraction, validation, compliance, routing, disbursement)
     - Lambda functions for portal API handlers and WebSocket handler
     - Step Functions Standard Workflow with logging and X-Ray tracing
     - S3 event notification to trigger Step Functions on document upload
     - _Requirements: 1.1, 15.1, 25.1_
 
-  - [~] 20.3 Deploy API Gateway, CloudFront, and frontend hosting
+  - [x] 20.3 Deploy API Gateway, CloudFront, and frontend hosting
     - REST API Gateway for portal endpoints with Cognito authorizer
     - WebSocket API Gateway for real-time updates
     - CloudFront distribution with S3 origin for React SPA
     - AWS WAF rules for request filtering
     - _Requirements: 24.1, 25.1, 20.1_
 
-- [ ] 21. Integration wiring and end-to-end flow
-  - [~] 21.1 Wire the full agent pipeline with Step Functions state machine definition
+- [x] 21. Integration wiring and end-to-end flow
+  - [x] 21.1 Wire the full agent pipeline with Step Functions state machine definition
     - Define Step Functions ASL with states for each agent
     - Wire retry/catch logic at each step for escalation
     - Connect S3 event trigger → Step Functions → agent sequence
     - Wire DynamoDB updates at each state transition
     - _Requirements: 1.1, 2.1, 2.2, 13.1, 15.1_
 
-  - [~] 21.2 Wire portal API handlers to data layer and payment pipeline
+  - [x] 21.2 Wire portal API handlers to data layer and payment pipeline
     - Connect contract finance API endpoints to DynamoDB operations
     - Connect portal to payment pipeline for SBIR invoice processing
     - Wire DynamoDB Streams → aggregation Lambda for real-time financial updates
     - Connect notification service for REA/option exercise events
     - _Requirements: 16.1, 18.2, 21.1, 25.1_
 
-  - [~] 21.3 Implement synthetic data generator for hackathon demo
+  - [x] 21.3 Implement synthetic data generator for hackathon demo
     - Generate realistic invoice PDFs with varying quality
     - Include known OFAC test entries and debarment matches
     - Span all approval thresholds
@@ -446,15 +446,118 @@ This implementation plan breaks down the Federal Payment Processing Platform int
     - Generate sample contracts with CLINs, options, and REAs for portal demo
     - _Requirements: 1.2, 4.1, 6.1_
 
-  - [~] 21.4 Write integration tests for end-to-end payment flow
+  - [x] 21.4 Write integration tests for end-to-end payment flow
     - Happy path: clean invoice → DISBURSED
     - Rejection path: sanctioned payee → NON_COMPLIANT
     - Escalation path: low confidence → ESCALATED
     - Portal flow: REA submission → approval → ceiling adjustment
     - _Requirements: 1.1, 6.2, 2.1, 18.3_
 
-- [~] 22. Final checkpoint - Ensure all tests pass
+- [x] 22. Final checkpoint - Ensure all tests pass
   - Ensure all tests pass, ask the user if questions arise.
+
+- [ ] 23. Implement Data Exploration & Tutorial Chatbot
+  - [x] 23.1 Create chatbot backend API handler with Bedrock Claude integration
+    - Create `internal/chatbot/handler.go` with Bedrock-powered chat endpoint
+    - Implement conversation context management (session-based)
+    - Build system prompt with app documentation context
+    - Implement data query capability (query DynamoDB for user's contracts, payments, etc.)
+    - Enforce RBAC: only return data the user has access to
+    - _Requirements: 26.1, 26.3, 26.4, 26.5, 26.6_
+
+  - [x] 23.2 Create chatbot knowledge base with app documentation
+    - Write structured knowledge base covering all app features
+    - Include: navigation help, feature explanations, workflow guides
+    - Include: data field definitions, status meanings, risk level explanations
+    - Format for injection into Bedrock prompt context
+    - _Requirements: 26.2_
+
+  - [x] 23.3 Implement chatbot frontend widget
+    - Create floating chat button (bottom-right, available on all pages)
+    - Implement chat panel with message history, typing indicator
+    - Send messages to chatbot API, display streamed responses
+    - Page-aware context (sends current page/route info to backend)
+    - Mobile-responsive: full-screen on mobile, sidebar panel on desktop
+    - _Requirements: 26.1, 26.2, 26.5_
+
+  - [~] 23.4 Write tests for chatbot RBAC data filtering
+    - Property test: chatbot never returns data from contracts user doesn't have access to
+    - Unit tests: different roles get appropriate data scoping
+    - _Requirements: 26.6_
+
+- [ ] 24. Implement Multichannel Document Ingestion
+  - [x] 24.1 Implement email ingestion channel
+    - Create SES receiving rule that forwards attachments to S3 ingestion bucket
+    - Parse email MIME content to extract PDF/image attachments
+    - Tag document with source channel "EMAIL" and sender metadata
+    - Trigger the same processing pipeline as portal uploads
+    - _Requirements: 27.1, 27.4, 27.6_
+
+  - [x] 24.2 Implement fax and mail ingestion channels
+    - Create API endpoint for fax gateway integration (accepts base64 image)
+    - Create API endpoint for mail scanning station (accepts scanned document)
+    - Tag documents with source channel "FAX" or "MAIL"
+    - Store original metadata (sender fax number, mail tracking ID)
+    - _Requirements: 27.2, 27.3, 27.4_
+
+  - [~] 24.3 Update frontend to display ingestion channel
+    - Add channel badge (EMAIL/FAX/MAIL/PORTAL) to payment detail view
+    - Add channel filter to payments list
+    - Show channel icon in pipeline tracker
+    - _Requirements: 27.5_
+
+  - [~] 24.4 Write tests for multichannel ingestion routing
+    - Unit tests: each channel correctly tags documents
+    - Integration test: documents from all channels reach the same pipeline
+    - _Requirements: 27.6_
+
+- [ ] 25. Implement Handwriting Recognition Enhancement
+  - [x] 25.1 Enhance extraction agent with handwriting detection
+    - Add Textract-based handwriting recognition as fallback for low-confidence Bedrock OCR
+    - Implement confidence scoring that distinguishes printed vs handwritten fields
+    - Set HANDWRITING_THRESHOLD = 0.65 for handwritten field flagging
+    - Mix printed and handwritten field results in the ExtractionResult
+    - _Requirements: 28.1, 28.2, 28.4_
+
+  - [~] 25.2 Implement handwriting verification workflow
+    - When handwriting confidence < HANDWRITING_THRESHOLD, flag for human verification
+    - Add "handwriting_review" as a new escalation reason
+    - Display handwritten fields with visual indicator in the review UI
+    - _Requirements: 28.3_
+
+  - [~] 25.3 Update frontend to show handwriting confidence indicators
+    - Show handwriting icon next to fields extracted from handwritten content
+    - Color-code confidence (red/yellow/green) for handwritten fields
+    - Add handwriting filter in the escalation queue
+    - _Requirements: 28.2, 28.3_
+
+- [ ] 26. Implement Automated Notification & Correspondence Generation
+  - [x] 26.1 Create correspondence generation service with Bedrock
+    - Create `internal/correspondence/generator.go`
+    - Implement letter templates: approval confirmation, rejection with reasons, REA response, escalation notification
+    - Use Bedrock Claude to generate contextual, professional correspondence
+    - Support multiple formats: email body (HTML), PDF letter content, portal notification text
+    - _Requirements: 29.1, 29.2, 29.3, 29.4, 29.5_
+
+  - [~] 26.2 Implement correspondence review and send workflow
+    - Create review queue for generated correspondence
+    - Allow human editors to modify before sending
+    - Track sent/pending/draft status for each correspondence
+    - Log correspondence in the payment audit trail
+    - _Requirements: 29.6_
+
+  - [~] 26.3 Implement frontend correspondence management view
+    - Create correspondence inbox/outbox view
+    - Show generated letter previews with edit capability
+    - Approve/send buttons with confirmation
+    - Template selection for manual correspondence
+    - _Requirements: 29.5, 29.6_
+
+  - [~] 26.4 Write tests for correspondence generation
+    - Unit tests: each trigger event generates the correct letter type
+    - Property test: generated correspondence always includes required fields (recipient, date, reference number)
+    - Test RBAC: correspondence only sent to authorized recipients
+    - _Requirements: 29.1, 29.2, 29.3, 29.4_
 
 ## Notes
 
@@ -485,7 +588,9 @@ This implementation plan breaks down the Federal Payment Processing Platform int
     { "id": 10, "tasks": ["15.2", "15.3", "19.2", "19.3", "20.1"] },
     { "id": 11, "tasks": ["20.2", "20.3"] },
     { "id": 12, "tasks": ["21.1", "21.2"] },
-    { "id": 13, "tasks": ["21.3", "21.4"] }
+    { "id": 13, "tasks": ["21.3", "21.4"] },
+    { "id": 14, "tasks": ["23.1", "23.2", "24.1", "24.2", "25.1", "26.1"] },
+    { "id": 15, "tasks": ["23.3", "23.4", "24.3", "24.4", "25.2", "25.3", "26.2", "26.3", "26.4"] }
   ]
 }
 ```

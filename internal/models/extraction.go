@@ -32,10 +32,11 @@ type BoundingBox struct {
 
 // ExtractedField represents a single field extracted from a document with its confidence.
 type ExtractedField struct {
-	Value       string       `json:"value"`
-	Confidence  float64      `json:"confidence"`
-	BoundingBox *BoundingBox `json:"boundingBox,omitempty"`
-	Normalized  string       `json:"normalized"`
+	Value         string       `json:"value"`
+	Confidence    float64      `json:"confidence"`
+	BoundingBox   *BoundingBox `json:"boundingBox,omitempty"`
+	Normalized    string       `json:"normalized"`
+	IsHandwritten bool         `json:"isHandwritten,omitempty"`
 }
 
 // ExtractionResult contains the full output of the document extraction agent.
