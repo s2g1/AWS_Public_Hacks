@@ -447,7 +447,7 @@ function FlaggedInvoicesPanel({ invoices, onApprove, onReject }: { invoices: Inv
 
 // --- Contract Card ---
 
-function ContractCard({ contract, onViewClins, onSubmitInvoice, onRequestMod, isGov, mods, onApproveMod, onRejectMod }: {
+function ContractCard({ contract, onViewClins, onSubmitInvoice, onRequestMod, isGov, mods, onApproveMod, onRejectMod, isExpanded, onToggleExpand }: {
   contract: Contract
   onViewClins: () => void
   onSubmitInvoice: () => void
@@ -456,6 +456,8 @@ function ContractCard({ contract, onViewClins, onSubmitInvoice, onRequestMod, is
   mods: ContractMod[]
   onApproveMod: (id: string) => void
   onRejectMod: (id: string) => void
+  isExpanded: boolean
+  onToggleExpand: () => void
 }) {
   const expendedPct = ((contract.totalExpended / contract.totalCeiling) * 100).toFixed(1)
   const obligatedPct = ((contract.totalObligated / contract.totalCeiling) * 100).toFixed(1)
@@ -466,80 +468,93 @@ function ContractCard({ contract, onViewClins, onSubmitInvoice, onRequestMod, is
 
   return (
     <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden mb-6">
-      <div className="bg-slate-800 px-4 sm:px-6 py-3 flex items-center justify-between">
+      <button
+        onClick={onToggleExpand}
+        className="w-full bg-slate-800 px-4 sm:px-6 py-3 flex items-center justify-between cursor-pointer hover:bg-slate-700 transition-colors"
+      >
         <div className="flex items-center gap-3">
+          <span className="text-gray-400 transition-transform duration-200 text-xs" style={{ transform: isExpanded ? 'rotate(90deg)' : 'rotate(0deg)' }}>▶</span>
           <span className="text-white font-mono text-sm sm:text-base font-bold">{contract.contractNumber}</span>
           <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold border ${
             contract.status === 'ACTIVE' ? 'bg-green-100 text-green-800 border-green-200' : 'bg-gray-100 text-gray-800 border-gray-200'
           }`}>{contract.status}</span>
         </div>
         <span className="text-emerald-400 text-xs sm:text-sm font-medium">{contract.contractor}</span>
-      </div>
+      </button>
 
-      <div className="p-4 sm:p-6">
-        <h2 className="text-lg sm:text-xl font-bold text-gray-900 mb-1">{contract.title}</h2>
-
-        {/* Pending Mods */}
-        <PendingModsPanel mods={mods} contractNumber={contract.contractNumber} isGov={isGov} onApprove={onApproveMod} onReject={onRejectMod} />
-
-        {/* Period of Performance */}
-        <div className="mt-4 p-3 bg-slate-50 rounded-lg border border-slate-200">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-xs font-semibold text-gray-700 uppercase tracking-wide">Period of Performance</span>
-            <span className="text-xs text-gray-500">{popProgress.toFixed(0)}% elapsed</span>
-          </div>
-          <div className="w-full bg-gray-200 rounded-full h-2.5 mb-2">
-            <div className="bg-blue-600 rounded-full h-2.5 transition-all" style={{ width: `${popProgress}%` }} />
-          </div>
-          <div className="flex justify-between text-xs text-gray-500">
-            <span>{contract.popStart}</span>
-            <span>{contract.popEnd}</span>
-          </div>
+      {/* Title always visible below header */}
+      {!isExpanded && (
+        <div className="px-4 sm:px-6 py-3 border-t border-gray-100">
+          <h2 className="text-sm sm:text-base font-semibold text-gray-900">{contract.title}</h2>
         </div>
+      )}
 
-        {/* Financial Summary */}
-        <div className="mt-5">
-          <h3 className="text-xs font-semibold text-gray-700 uppercase tracking-wide mb-3">Financial Summary</h3>
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-            <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">
-              <p className="text-xs text-gray-500 font-medium">Ceiling</p>
-              <p className="text-base sm:text-lg font-bold text-gray-900">{formatCurrency(contract.totalCeiling)}</p>
+      {isExpanded && (
+        <div className="p-4 sm:p-6">
+          <h2 className="text-lg sm:text-xl font-bold text-gray-900 mb-1">{contract.title}</h2>
+
+          {/* Pending Mods */}
+          <PendingModsPanel mods={mods} contractNumber={contract.contractNumber} isGov={isGov} onApprove={onApproveMod} onReject={onRejectMod} />
+
+          {/* Period of Performance */}
+          <div className="mt-4 p-3 bg-slate-50 rounded-lg border border-slate-200">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-xs font-semibold text-gray-700 uppercase tracking-wide">Period of Performance</span>
+              <span className="text-xs text-gray-500">{popProgress.toFixed(0)}% elapsed</span>
             </div>
-            <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">
-              <p className="text-xs text-gray-500 font-medium">Obligated</p>
-              <p className="text-base sm:text-lg font-bold text-gray-900">{formatCurrency(contract.totalObligated)}</p>
-              <p className="text-xs text-gray-400">{obligatedPct}% of ceiling</p>
+            <div className="w-full bg-gray-200 rounded-full h-2.5 mb-2">
+              <div className="bg-blue-600 rounded-full h-2.5 transition-all" style={{ width: `${popProgress}%` }} />
             </div>
-            <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">
-              <p className="text-xs text-gray-500 font-medium">Expended</p>
-              <p className="text-base sm:text-lg font-bold text-gray-900">{formatCurrency(contract.totalExpended)}</p>
-              <p className="text-xs text-gray-400">{expendedPct}% of ceiling</p>
-            </div>
-            <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">
-              <p className="text-xs text-gray-500 font-medium">Remaining</p>
-              <p className="text-base sm:text-lg font-bold text-gray-900">{formatCurrency(contract.totalCeiling - contract.totalExpended)}</p>
+            <div className="flex justify-between text-xs text-gray-500">
+              <span>{contract.popStart}</span>
+              <span>{contract.popEnd}</span>
             </div>
           </div>
-        </div>
 
-        {/* Actions */}
-        <div className="mt-6 flex gap-3 flex-wrap">
-          <button onClick={onViewClins} className="inline-flex items-center gap-2 px-5 py-2.5 bg-slate-800 text-white text-sm font-medium rounded-lg hover:bg-slate-700 transition-colors">
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
-            View CLINs
-          </button>
-          {!isGov && contract.status === 'ACTIVE' && (
-            <button onClick={onSubmitInvoice} className="inline-flex items-center gap-2 px-5 py-2.5 bg-green-600 text-white text-sm font-medium rounded-lg hover:bg-green-700 transition-colors">
-              Submit Invoice
+          {/* Financial Summary */}
+          <div className="mt-5">
+            <h3 className="text-xs font-semibold text-gray-700 uppercase tracking-wide mb-3">Financial Summary</h3>
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+              <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">
+                <p className="text-xs text-gray-500 font-medium">Ceiling</p>
+                <p className="text-base sm:text-lg font-bold text-gray-900">{formatCurrency(contract.totalCeiling)}</p>
+              </div>
+              <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">
+                <p className="text-xs text-gray-500 font-medium">Obligated</p>
+                <p className="text-base sm:text-lg font-bold text-gray-900">{formatCurrency(contract.totalObligated)}</p>
+                <p className="text-xs text-gray-400">{obligatedPct}% of ceiling</p>
+              </div>
+              <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">
+                <p className="text-xs text-gray-500 font-medium">Expended</p>
+                <p className="text-base sm:text-lg font-bold text-gray-900">{formatCurrency(contract.totalExpended)}</p>
+                <p className="text-xs text-gray-400">{expendedPct}% of ceiling</p>
+              </div>
+              <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">
+                <p className="text-xs text-gray-500 font-medium">Remaining</p>
+                <p className="text-base sm:text-lg font-bold text-gray-900">{formatCurrency(contract.totalCeiling - contract.totalExpended)}</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Actions */}
+          <div className="mt-6 flex gap-3 flex-wrap">
+            <button onClick={(e) => { e.stopPropagation(); onViewClins(); }} className="inline-flex items-center gap-2 px-5 py-2.5 bg-slate-800 text-white text-sm font-medium rounded-lg hover:bg-slate-700 transition-colors">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
+              View CLINs
             </button>
-          )}
-          {contract.status === 'ACTIVE' && (
-            <button onClick={onRequestMod} className="inline-flex items-center gap-2 px-5 py-2.5 bg-purple-600 text-white text-sm font-medium rounded-lg hover:bg-purple-700 transition-colors">
-              {isGov ? 'Issue Mod' : 'Request Mod'}
-            </button>
-          )}
+            {!isGov && contract.status === 'ACTIVE' && (
+              <button onClick={(e) => { e.stopPropagation(); onSubmitInvoice(); }} className="inline-flex items-center gap-2 px-5 py-2.5 bg-green-600 text-white text-sm font-medium rounded-lg hover:bg-green-700 transition-colors">
+                Submit Invoice
+              </button>
+            )}
+            {contract.status === 'ACTIVE' && (
+              <button onClick={(e) => { e.stopPropagation(); onRequestMod(); }} className="inline-flex items-center gap-2 px-5 py-2.5 bg-purple-600 text-white text-sm font-medium rounded-lg hover:bg-purple-700 transition-colors">
+                {isGov ? 'Issue Mod' : 'Request Mod'}
+              </button>
+            )}
+          </div>
         </div>
-      </div>
+      )}
     </div>
   )
 }
@@ -562,6 +577,7 @@ function Contracts() {
   const invoices = state.invoices
 
   const [expandedContract, setExpandedContract] = useState<string | null>(null)
+  const [expandedCard, setExpandedCard] = useState<string | null>(null)
   const [expandedClins, setExpandedClins] = useState<Set<string>>(new Set())
   const [invoiceContract, setInvoiceContract] = useState<Contract | null>(null)
   const [modContract, setModContract] = useState<Contract | null>(null)
@@ -650,6 +666,8 @@ function Contracts() {
                 onRequestMod={() => setModContract(contract)}
                 onApproveMod={approveContractMod}
                 onRejectMod={rejectContractMod}
+                isExpanded={expandedCard === contract.id}
+                onToggleExpand={() => setExpandedCard(expandedCard === contract.id ? null : contract.id)}
               />
 
               {/* CLIN details */}

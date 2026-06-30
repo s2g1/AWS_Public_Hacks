@@ -290,13 +290,15 @@ function ProposalModal({
   solicitation,
   onClose,
   onSubmit,
+  vendorCompany,
 }: {
   solicitation: Solicitation
   onClose: () => void
   onSubmit: (form: ProposalForm) => void
+  vendorCompany: string
 }) {
   const [form, setForm] = useState<ProposalForm>({
-    companyName: '',
+    companyName: vendorCompany,
     technicalApproach: '',
     priceProposal: '',
     pastPerformance: '',
@@ -307,9 +309,11 @@ function ProposalModal({
 
   function validate(): boolean {
     const newErrors: Record<string, string> = {}
-    if (!form.companyName.trim()) newErrors.companyName = 'Company name is required'
-    if (!form.technicalApproach.trim()) newErrors.technicalApproach = 'Technical approach is required'
-    if (!form.priceProposal.trim()) newErrors.priceProposal = 'Price proposal is required'
+    // Require either technicalApproach text OR an attachment
+    if (!form.technicalApproach.trim() && !form.attachmentName) {
+      newErrors.technicalApproach = 'Either a technical approach or an uploaded proposal document is required'
+    }
+    // priceProposal is optional — defaults to 0 if empty
     setErrors(newErrors)
     return Object.keys(newErrors).length === 0
   }
@@ -317,7 +321,7 @@ function ProposalModal({
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     if (validate()) {
-      onSubmit(form)
+      onSubmit({ ...form, companyName: vendorCompany })
     }
   }
 
@@ -339,23 +343,19 @@ function ProposalModal({
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Company Name <span className="text-red-500">*</span>
+              Company Name
             </label>
             <input
               type="text"
-              value={form.companyName}
-              onChange={(e) => setForm({ ...form, companyName: e.target.value })}
-              className={`w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
-                errors.companyName ? 'border-red-300' : 'border-gray-300'
-              }`}
-              placeholder="Your company legal name"
+              value={vendorCompany}
+              disabled
+              className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-gray-50 text-gray-700 cursor-not-allowed"
             />
-            {errors.companyName && <p className="mt-1 text-xs text-red-600">{errors.companyName}</p>}
           </div>
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Technical Approach <span className="text-red-500">*</span>
+              Technical Approach {!form.attachmentName && <span className="text-red-500">*</span>}
             </label>
             <textarea
               value={form.technicalApproach}
@@ -364,25 +364,22 @@ function ProposalModal({
               className={`w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
                 errors.technicalApproach ? 'border-red-300' : 'border-gray-300'
               }`}
-              placeholder="Describe your technical approach to meeting the requirements..."
+              placeholder="Describe your technical approach to meeting the requirements... (or upload a proposal document below)"
             />
             {errors.technicalApproach && <p className="mt-1 text-xs text-red-600">{errors.technicalApproach}</p>}
           </div>
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Price Proposal ($) <span className="text-red-500">*</span>
+              Price Proposal ($)
             </label>
             <input
               type="text"
               value={form.priceProposal}
               onChange={(e) => setForm({ ...form, priceProposal: e.target.value })}
-              className={`w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
-                errors.priceProposal ? 'border-red-300' : 'border-gray-300'
-              }`}
-              placeholder="e.g., 3500000"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              placeholder="e.g., 3500000 (optional if included in uploaded document)"
             />
-            {errors.priceProposal && <p className="mt-1 text-xs text-red-600">{errors.priceProposal}</p>}
           </div>
 
           <div>
@@ -1088,6 +1085,7 @@ function Solicitations() {
           solicitation={selectedSolicitation}
           onClose={() => setShowProposalModal(false)}
           onSubmit={handleProposalSubmit}
+          vendorCompany={state.vendorCompany}
         />
       )}
 

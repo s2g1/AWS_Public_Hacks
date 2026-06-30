@@ -614,16 +614,29 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
       const contractId = `contract-${Date.now()}`
       const contractNumber = `FA8750-25-F-${String(Math.floor(Math.random() * 9000) + 1000)}`
-      const clins: CLINItem[] = proposal.clinStructure || [
-        {
-          clinNumber: '0001',
-          description: 'Base Performance',
-          type: 'CPFF',
-          ceiling: proposal.priceProposal,
-          obligated: proposal.priceProposal * 0.6,
+      // Priority: AI evaluation CLINs > manual clinStructure > default fallback
+      let clins: CLINItem[]
+      if (proposal.aiEvaluation?.clinBreakdown && proposal.aiEvaluation.clinBreakdown.length > 0) {
+        // Use AI-generated CLIN breakdown, set obligated for first funded period
+        clins = proposal.aiEvaluation.clinBreakdown.map((clin, idx) => ({
+          ...clin,
+          obligated: idx === 0 ? Math.round(clin.ceiling * 0.6) : 0,
           expended: 0,
-        },
-      ]
+        }))
+      } else if (proposal.clinStructure && proposal.clinStructure.length > 0) {
+        clins = proposal.clinStructure
+      } else {
+        clins = [
+          {
+            clinNumber: '0001',
+            description: 'Base Performance',
+            type: 'CPFF',
+            ceiling: proposal.priceProposal,
+            obligated: Math.round(proposal.priceProposal * 0.6),
+            expended: 0,
+          },
+        ]
+      }
 
       const totalCeiling = clins.reduce((sum, c) => sum + c.ceiling, 0)
       const totalObligated = clins.reduce((sum, c) => sum + c.obligated, 0)
