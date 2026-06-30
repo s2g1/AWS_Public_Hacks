@@ -192,7 +192,7 @@ export class InfraStack extends cdk.Stack {
       timeout: cdk.Duration.seconds(60),
       memorySize: 256,
       environment: {
-        BEDROCK_MODEL_ID: 'us.anthropic.claude-sonnet-4-20250514-v1:0',
+        BEDROCK_MODEL_ID: 'us.anthropic.claude-3-haiku-20240307-v1:0',
       },
     });
 

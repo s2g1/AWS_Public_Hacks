@@ -448,6 +448,103 @@ function ProposalModal({
   )
 }
 
+// --- Proposal Actions (handles manual approval with justification) ---
+
+function ProposalActions({
+  proposal,
+  isEvaluating,
+  onApprove,
+  onReject,
+}: {
+  proposal: Proposal
+  isEvaluating: boolean
+  onApprove: (proposalId: string) => void
+  onReject: (proposalId: string) => void
+}) {
+  const [showJustification, setShowJustification] = useState(false)
+  const [justification, setJustification] = useState('')
+  const hasEval = !!proposal.aiEvaluation
+
+  // If AI eval exists, allow direct approve
+  if (hasEval) {
+    return (
+      <div className="flex gap-2 mt-3">
+        <button
+          onClick={() => onApprove(proposal.id)}
+          className="px-3 py-1.5 text-xs font-medium text-white bg-green-600 rounded-lg hover:bg-green-700"
+        >
+          Approve & Award
+        </button>
+        <button
+          onClick={() => onReject(proposal.id)}
+          className="px-3 py-1.5 text-xs font-medium text-red-700 bg-red-50 border border-red-200 rounded-lg hover:bg-red-100"
+        >
+          Reject
+        </button>
+      </div>
+    )
+  }
+
+  // No AI eval — require justification for manual approval
+  return (
+    <div className="mt-3 space-y-2">
+      {isEvaluating ? (
+        <p className="text-xs text-blue-600 italic">⏳ AI evaluation in progress — you can approve manually below</p>
+      ) : (
+        <div className="bg-amber-50 border border-amber-200 rounded-lg p-2">
+          <p className="text-xs text-amber-800">⚠️ AI evaluation unavailable. Manual approval requires justification.</p>
+        </div>
+      )}
+
+      {!showJustification ? (
+        <div className="flex gap-2">
+          <button
+            onClick={() => setShowJustification(true)}
+            className="px-3 py-1.5 text-xs font-medium text-white bg-green-600 rounded-lg hover:bg-green-700"
+          >
+            Approve Manually (with Justification)
+          </button>
+          <button
+            onClick={() => onReject(proposal.id)}
+            className="px-3 py-1.5 text-xs font-medium text-red-700 bg-red-50 border border-red-200 rounded-lg hover:bg-red-100"
+          >
+            Reject
+          </button>
+        </div>
+      ) : (
+        <div className="space-y-2">
+          <textarea
+            value={justification}
+            onChange={(e) => setJustification(e.target.value)}
+            rows={2}
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-xs focus:ring-2 focus:ring-green-500 focus:border-green-500"
+            placeholder="Enter justification for manual approval (e.g., CO review completed, price fair & reasonable determination)..."
+          />
+          <div className="flex gap-2">
+            <button
+              onClick={() => {
+                if (justification.trim()) onApprove(proposal.id)
+              }}
+              disabled={!justification.trim()}
+              className={`px-3 py-1.5 text-xs font-medium text-white rounded-lg ${
+                justification.trim() ? 'bg-green-600 hover:bg-green-700' : 'bg-gray-300 cursor-not-allowed'
+              }`}
+            >
+              Confirm Approval
+            </button>
+            <button
+              onClick={() => { setShowJustification(false); setJustification('') }}
+              className="px-3 py-1.5 text-xs font-medium text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
 // --- Proposals Review Panel (GOV) ---
 
 function ProposalsReviewPanel({
@@ -576,20 +673,12 @@ function ProposalsReviewPanel({
                   )}
 
                   {proposal.status === 'SUBMITTED' && (
-                    <div className="flex gap-2 mt-3">
-                      <button
-                        onClick={() => onApprove(proposal.id)}
-                        className="px-3 py-1.5 text-xs font-medium text-white bg-green-600 rounded-lg hover:bg-green-700"
-                      >
-                        Approve & Award
-                      </button>
-                      <button
-                        onClick={() => onReject(proposal.id)}
-                        className="px-3 py-1.5 text-xs font-medium text-red-700 bg-red-50 border border-red-200 rounded-lg hover:bg-red-100"
-                      >
-                        Reject
-                      </button>
-                    </div>
+                    <ProposalActions
+                      proposal={proposal}
+                      isEvaluating={evaluatingProposals.has(proposal.id)}
+                      onApprove={onApprove}
+                      onReject={onReject}
+                    />
                   )}
                 </div>
               ))}
