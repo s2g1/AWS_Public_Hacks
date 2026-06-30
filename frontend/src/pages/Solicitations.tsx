@@ -291,11 +291,13 @@ function ProposalModal({
   onClose,
   onSubmit,
   vendorCompany,
+  onFileSelected,
 }: {
   solicitation: Solicitation
   onClose: () => void
   onSubmit: (form: ProposalForm) => void
   vendorCompany: string
+  onFileSelected: (file: File | undefined) => void
 }) {
   const [form, setForm] = useState<ProposalForm>({
     companyName: vendorCompany,
@@ -411,7 +413,12 @@ function ProposalModal({
               accept=".pdf,.doc,.docx,.txt,.zip"
               onChange={(e) => {
                 const file = e.target.files?.[0]
-                if (file) setForm({ ...form, attachmentName: file.name })
+                if (file) {
+                  setForm({ ...form, attachmentName: file.name })
+                  onFileSelected(file)
+                } else {
+                  onFileSelected(undefined)
+                }
               }}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 file:mr-4 file:py-1 file:px-3 file:rounded file:border-0 file:text-sm file:font-medium file:bg-green-50 file:text-green-700 hover:file:bg-green-100"
             />
@@ -449,12 +456,14 @@ function ProposalsReviewPanel({
   onApprove,
   onReject,
   onClose,
+  evaluatingProposals,
 }: {
   solicitation: Solicitation
   proposals: Proposal[]
   onApprove: (proposalId: string) => void
   onReject: (proposalId: string) => void
   onClose: () => void
+  evaluatingProposals: Set<string>
 }) {
   const solProposals = proposals.filter(p => p.solicitationId === solicitation.id)
 
@@ -513,6 +522,26 @@ function ProposalsReviewPanel({
                   </div>
 
                   {/* AI Evaluation Section */}
+                  {evaluatingProposals.has(proposal.id) && !proposal.aiEvaluation && (
+                    <div className="mt-3 bg-blue-50 border border-blue-200 rounded-lg p-6">
+                      <div className="flex flex-col items-center gap-3">
+                        <div className="relative w-12 h-12">
+                          <div className="absolute inset-0 rounded-full border-4 border-blue-200"></div>
+                          <div className="absolute inset-0 rounded-full border-4 border-blue-600 border-t-transparent animate-spin"></div>
+                        </div>
+                        <div className="text-center">
+                          <h4 className="text-sm font-semibold text-blue-900">🤖 AI Evaluation in Progress</h4>
+                          <p className="text-xs text-blue-700 mt-1">Analyzing proposal against SOW requirements...</p>
+                          <p className="text-xs text-blue-500 mt-0.5">Extracting CLIN structure & generating BOE allocation</p>
+                        </div>
+                        <div className="flex gap-1 mt-1">
+                          <div className="w-2 h-2 bg-blue-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
+                          <div className="w-2 h-2 bg-blue-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
+                          <div className="w-2 h-2 bg-blue-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                   {proposal.aiEvaluation && (
                     <div className="mt-3 bg-gray-50 border border-gray-200 rounded-lg p-4">
                       <div className="flex items-center justify-between mb-3">
@@ -872,7 +901,7 @@ function Toast({ message, onClose }: { message: string; onClose: () => void }) {
 // --- Main Solicitations Component ---
 
 function Solicitations() {
-  const { state, createSolicitation, publishSolicitation, submitProposal, approveProposal, rejectProposal } = useAppContext()
+  const { state, createSolicitation, publishSolicitation, submitProposal, approveProposal, rejectProposal, evaluatingProposals } = useAppContext()
   const isGov = state.currentRole === 'GOV'
 
   const [activeTab, setActiveTab] = useState('ALL')
@@ -882,6 +911,7 @@ function Solicitations() {
   const [showProposalModal, setShowProposalModal] = useState(false)
   const [showReviewPanel, setShowReviewPanel] = useState(false)
   const [toast, setToast] = useState<string | null>(null)
+  const [proposalFile, setProposalFile] = useState<File | undefined>(undefined)
 
   // VENDOR sees: OPEN (all) + AWARDED if awarded to their company + AWARDED to others (show "Not Awarded" badge)
   const visibleSolicitations = useMemo(() => {
@@ -956,9 +986,10 @@ function Solicitations() {
         pastPerformance: form.pastPerformance,
         keyPersonnel: form.keyPersonnel,
         attachmentName: form.attachmentName || undefined,
-      })
+      }, proposalFile)
       setShowProposalModal(false)
-      showToast('Proposal submitted successfully! AI evaluation will be generated shortly.')
+      setProposalFile(undefined)
+      showToast('Proposal submitted! AI evaluation in progress...')
     }
   }
 
@@ -1086,6 +1117,7 @@ function Solicitations() {
           onClose={() => setShowProposalModal(false)}
           onSubmit={handleProposalSubmit}
           vendorCompany={state.vendorCompany}
+          onFileSelected={(file) => setProposalFile(file)}
         />
       )}
 
@@ -1096,6 +1128,7 @@ function Solicitations() {
           onApprove={handleApproveProposal}
           onReject={handleRejectProposal}
           onClose={() => setShowReviewPanel(false)}
+          evaluatingProposals={evaluatingProposals}
         />
       )}
 

@@ -5,6 +5,7 @@ import * as cloudfront from 'aws-cdk-lib/aws-cloudfront';
 import * as origins from 'aws-cdk-lib/aws-cloudfront-origins';
 import * as dynamodb from 'aws-cdk-lib/aws-dynamodb';
 import * as iam from 'aws-cdk-lib/aws-iam';
+import * as lambda from 'aws-cdk-lib/aws-lambda';
 import { Construct } from 'constructs';
 import * as path from 'path';
 
@@ -180,8 +181,46 @@ export class InfraStack extends cdk.Stack {
     }));
 
     // =========================================================================
+    // Lambda: Proposal Evaluation (Bedrock-powered)
+    // =========================================================================
+
+    const evaluateProposalFn = new lambda.Function(this, 'EvaluateProposalFn', {
+      functionName: `fedpay-evaluate-proposal-${this.region}`,
+      runtime: lambda.Runtime.PROVIDED_AL2023,
+      handler: 'bootstrap',
+      code: lambda.Code.fromAsset(path.join(__dirname, '../../lambda/evaluate-proposal/dist')),
+      timeout: cdk.Duration.seconds(60),
+      memorySize: 256,
+      environment: {
+        BEDROCK_MODEL_ID: 'anthropic.claude-3-5-sonnet-20241022-v2:0',
+      },
+    });
+
+    // Grant Bedrock invoke permissions
+    evaluateProposalFn.addToRolePolicy(new iam.PolicyStatement({
+      effect: iam.Effect.ALLOW,
+      actions: ['bedrock:InvokeModel', 'bedrock:InvokeModelWithResponseStream'],
+      resources: ['*'],
+    }));
+
+    // Create Function URL with public access (for demo)
+    const fnUrl = evaluateProposalFn.addFunctionUrl({
+      authType: lambda.FunctionUrlAuthType.NONE,
+      cors: {
+        allowedOrigins: ['*'],
+        allowedMethods: [lambda.HttpMethod.POST, lambda.HttpMethod.OPTIONS],
+        allowedHeaders: ['Content-Type'],
+      },
+    });
+
+    // =========================================================================
     // Outputs
     // =========================================================================
+
+    new cdk.CfnOutput(this, 'EvaluateProposalUrl', {
+      value: fnUrl.url,
+      description: 'Lambda Function URL for proposal evaluation',
+    });
 
     new cdk.CfnOutput(this, 'DistributionDomainName', {
       value: `https://${distribution.distributionDomainName}`,
