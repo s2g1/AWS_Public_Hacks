@@ -27,9 +27,8 @@ interface EvaluationRequest {
   companyName: string
 }
 
-// The Lambda Function URL - disabled (Bedrock models unavailable in this account)
-// Falls back to high-quality simulated evaluation
-const EVALUATE_PROPOSAL_URL = ''
+// The Lambda Function URL - calls Amazon Nova Pro for AI evaluation
+const EVALUATE_PROPOSAL_URL = import.meta.env.VITE_EVALUATE_PROPOSAL_URL || ''
 
 /**
  * Convert a File to base64 string

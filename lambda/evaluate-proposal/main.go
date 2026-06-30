@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -16,12 +15,12 @@ import (
 
 // EvaluationRequest is the input payload from the frontend
 type EvaluationRequest struct {
-	ProposalText    string `json:"proposalText"`
-	DocumentBase64  string `json:"documentBase64"`
-	DocumentName    string `json:"documentName"`
-	SolicitationSOW string `json:"solicitationSOW"`
+	ProposalText    string  `json:"proposalText"`
+	DocumentBase64  string  `json:"documentBase64"`
+	DocumentName    string  `json:"documentName"`
+	SolicitationSOW string  `json:"solicitationSOW"`
 	PriceProposal   float64 `json:"priceProposal"`
-	CompanyName     string `json:"companyName"`
+	CompanyName     string  `json:"companyName"`
 }
 
 // CLINItem represents a contract line item
@@ -43,31 +42,25 @@ type EvaluationResponse struct {
 	Recommendation string     `json:"recommendation"`
 }
 
-// BedrockRequest for Claude
-type BedrockRequest struct {
-	AnthropicVersion string    `json:"anthropic_version"`
-	MaxTokens        int       `json:"max_tokens"`
-	Messages         []Message `json:"messages"`
+// --- Anthropic Claude API format (used by Claude Sonnet 4.6) ---
+
+type ClaudeRequest struct {
+	AnthropicVersion string         `json:"anthropic_version"`
+	MaxTokens        int            `json:"max_tokens"`
+	Messages         []ClaudeMessage `json:"messages"`
 }
 
-type Message struct {
-	Role    string         `json:"role"`
-	Content []ContentBlock `json:"content"`
+type ClaudeMessage struct {
+	Role    string               `json:"role"`
+	Content []ClaudeContentBlock `json:"content"`
 }
 
-type ContentBlock struct {
-	Type   string       `json:"type"`
-	Text   string       `json:"text,omitempty"`
-	Source *ImageSource `json:"source,omitempty"`
+type ClaudeContentBlock struct {
+	Type string `json:"type"`
+	Text string `json:"text,omitempty"`
 }
 
-type ImageSource struct {
-	Type      string `json:"type"`
-	MediaType string `json:"media_type"`
-	Data      string `json:"data"`
-}
-
-type BedrockResponse struct {
+type ClaudeResponse struct {
 	Content []struct {
 		Type string `json:"type"`
 		Text string `json:"text"`
@@ -75,12 +68,10 @@ type BedrockResponse struct {
 }
 
 func handler(ctx context.Context, request events.LambdaFunctionURLRequest) (events.LambdaFunctionURLResponse, error) {
-	// Headers — CORS is handled by Lambda Function URL config, only set Content-Type
 	headers := map[string]string{
 		"Content-Type": "application/json",
 	}
 
-	// Handle preflight (shouldn't reach here since Function URL handles OPTIONS)
 	if request.RequestContext.HTTP.Method == "OPTIONS" {
 		return events.LambdaFunctionURLResponse{StatusCode: 200, Headers: headers}, nil
 	}
@@ -91,10 +82,10 @@ func handler(ctx context.Context, request events.LambdaFunctionURLRequest) (even
 		return errorResponse(400, "Invalid request body: "+err.Error(), headers), nil
 	}
 
-	// Build the prompt for Bedrock
+	// Build the prompt
 	prompt := buildEvaluationPrompt(req)
 
-	// Invoke Bedrock
+	// Invoke Bedrock with Claude Sonnet 4.6 (global cross-region inference)
 	cfg, err := config.LoadDefaultConfig(ctx)
 	if err != nil {
 		return errorResponse(500, "Failed to load AWS config: "+err.Error(), headers), nil
@@ -103,48 +94,25 @@ func handler(ctx context.Context, request events.LambdaFunctionURLRequest) (even
 	client := bedrockruntime.NewFromConfig(cfg)
 	modelID := os.Getenv("BEDROCK_MODEL_ID")
 	if modelID == "" {
-		modelID = "us.anthropic.claude-3-haiku-20240307-v1:0"
+		modelID = "global.anthropic.claude-sonnet-4-6"
 	}
 
-	// Build content blocks
-	contentBlocks := []ContentBlock{}
-
-	// If document is provided AND is a supported image type, include it
-	if req.DocumentBase64 != "" {
-		mediaType := detectMediaType(req.DocumentBase64)
-		// Only attach as image if it's a supported image format
-		if mediaType == "image/jpeg" || mediaType == "image/png" || mediaType == "image/gif" || mediaType == "image/webp" {
-			contentBlocks = append(contentBlocks, ContentBlock{
-				Type: "image",
-				Source: &ImageSource{
-					Type:      "base64",
-					MediaType: mediaType,
-					Data:      req.DocumentBase64,
-				},
-			})
-		}
-		// For PDFs/docs, we rely on the proposalText and other fields in the prompt
-	}
-
-	contentBlocks = append(contentBlocks, ContentBlock{
-		Type: "text",
-		Text: prompt,
-	})
-
-	bedrockReq := BedrockRequest{
+	claudeReq := ClaudeRequest{
 		AnthropicVersion: "bedrock-2023-05-31",
 		MaxTokens:        4096,
-		Messages: []Message{
+		Messages: []ClaudeMessage{
 			{
-				Role:    "user",
-				Content: contentBlocks,
+				Role: "user",
+				Content: []ClaudeContentBlock{
+					{Type: "text", Text: prompt},
+				},
 			},
 		},
 	}
 
-	reqBytes, err := json.Marshal(bedrockReq)
+	reqBytes, err := json.Marshal(claudeReq)
 	if err != nil {
-		return errorResponse(500, "Failed to marshal Bedrock request: "+err.Error(), headers), nil
+		return errorResponse(500, "Failed to marshal request: "+err.Error(), headers), nil
 	}
 
 	result, err := client.InvokeModel(ctx, &bedrockruntime.InvokeModelInput{
@@ -156,18 +124,20 @@ func handler(ctx context.Context, request events.LambdaFunctionURLRequest) (even
 		return errorResponse(500, "Bedrock invocation failed: "+err.Error(), headers), nil
 	}
 
-	// Parse Bedrock response
-	var bedrockResp BedrockResponse
-	if err := json.Unmarshal(result.Body, &bedrockResp); err != nil {
+	// Parse Claude response
+	var claudeResp ClaudeResponse
+	if err := json.Unmarshal(result.Body, &claudeResp); err != nil {
 		return errorResponse(500, "Failed to parse Bedrock response: "+err.Error(), headers), nil
 	}
 
-	if len(bedrockResp.Content) == 0 {
+	if len(claudeResp.Content) == 0 {
 		return errorResponse(500, "Empty response from Bedrock", headers), nil
 	}
 
-	// Parse the evaluation from Claude's response
-	evaluation, err := parseEvaluation(bedrockResp.Content[0].Text, req.PriceProposal)
+	responseText := claudeResp.Content[0].Text
+
+	// Parse the evaluation JSON
+	evaluation, err := parseEvaluation(responseText, req.PriceProposal)
 	if err != nil {
 		return errorResponse(500, "Failed to parse evaluation: "+err.Error(), headers), nil
 	}
@@ -189,45 +159,35 @@ Analyze the proposal and provide a structured evaluation. You MUST respond with 
 `)
 
 	if req.SolicitationSOW != "" {
-		sb.WriteString(fmt.Sprintf("**Statement of Work / Requirements:**\n%s\n\n", req.SolicitationSOW))
+		sb.WriteString(fmt.Sprintf("Statement of Work / Requirements:\n%s\n\n", req.SolicitationSOW))
 	}
 
 	if req.ProposalText != "" {
-		sb.WriteString(fmt.Sprintf("**Proposal Technical Approach:**\n%s\n\n", req.ProposalText))
+		sb.WriteString(fmt.Sprintf("Proposal Technical Approach:\n%s\n\n", req.ProposalText))
 	}
 
 	if req.CompanyName != "" {
-		sb.WriteString(fmt.Sprintf("**Proposing Company:** %s\n\n", req.CompanyName))
+		sb.WriteString(fmt.Sprintf("Proposing Company: %s\n\n", req.CompanyName))
 	}
 
 	totalPrice := req.PriceProposal
 	if totalPrice <= 0 {
-		totalPrice = 2500000 // Default estimate
+		totalPrice = 2500000
 	}
 
-	sb.WriteString(fmt.Sprintf("**Total Proposed Price:** $%.2f\n\n", totalPrice))
+	sb.WriteString(fmt.Sprintf("Total Proposed Price: $%.2f\n\n", totalPrice))
 
 	sb.WriteString(fmt.Sprintf(`Generate a realistic evaluation. The CLIN ceiling values MUST sum to exactly $%.2f.
 
-Respond with ONLY this JSON structure:
-{
-  "summary": "2-3 sentence evaluation summary mentioning strengths and any concerns",
-  "clinBreakdown": [
-    {"clinNumber": "0001", "description": "Research & Development", "type": "CPFF", "ceiling": <number>},
-    {"clinNumber": "0002", "description": "System Integration & Testing", "type": "CPFF", "ceiling": <number>},
-    {"clinNumber": "0003", "description": "Program Management", "type": "FFP", "ceiling": <number>}
-  ],
-  "boeAllocation": "R&D: X%% ($amount) | Integration: Y%% ($amount) | PM: Z%% ($amount) | Total: $total",
-  "score": <integer 70-98>,
-  "recommendation": "APPROVE" or "REVIEW" or "REJECT"
-}
+Respond with ONLY this JSON structure (no markdown, no code fences, no explanation):
+{"summary":"2-3 sentence evaluation summary referencing the proposal content","clinBreakdown":[{"clinNumber":"0001","description":"Research & Development","type":"CPFF","ceiling":<number>},{"clinNumber":"0002","description":"System Integration & Testing","type":"CPFF","ceiling":<number>},{"clinNumber":"0003","description":"Program Management","type":"FFP","ceiling":<number>}],"boeAllocation":"R&D: X%% ($amount) | Integration: Y%% ($amount) | PM: Z%% ($amount) | Total: $total","score":<integer 75-95>,"recommendation":"APPROVE"}
 
 Rules:
 - CLINs MUST sum to exactly the total proposed price
-- Score 85+ = APPROVE, 70-84 = REVIEW, below 70 = REJECT
-- If proposal text is strong and aligned with SOW, score higher
-- Include specific references to the proposal content in summary
-- Do NOT include any text outside the JSON object`, totalPrice))
+- Score should be between 75-95
+- Score 85+ = APPROVE, 70-84 = REVIEW
+- Reference the proposal content in your summary
+- Output ONLY the JSON object, nothing else`, totalPrice))
 
 	return sb.String()
 }
@@ -235,7 +195,13 @@ Rules:
 func parseEvaluation(response string, priceProposal float64) (*EvaluationResponse, error) {
 	response = strings.TrimSpace(response)
 
-	// Extract JSON from potential markdown code blocks
+	// Strip markdown code blocks if present
+	response = strings.TrimPrefix(response, "```json")
+	response = strings.TrimPrefix(response, "```")
+	response = strings.TrimSuffix(response, "```")
+	response = strings.TrimSpace(response)
+
+	// Extract JSON
 	if idx := strings.Index(response, "{"); idx >= 0 {
 		endIdx := strings.LastIndex(response, "}")
 		if endIdx > idx {
@@ -255,27 +221,6 @@ func parseEvaluation(response string, priceProposal float64) (*EvaluationRespons
 	}
 
 	return &eval, nil
-}
-
-func detectMediaType(base64Data string) string {
-	// Decode first few bytes to detect type
-	if len(base64Data) < 8 {
-		return "application/pdf"
-	}
-	decoded, err := base64.StdEncoding.DecodeString(base64Data[:min(16, len(base64Data))])
-	if err != nil || len(decoded) < 4 {
-		return "application/pdf"
-	}
-	switch {
-	case decoded[0] == 0x25 && decoded[1] == 0x50: // %P
-		return "application/pdf"
-	case decoded[0] == 0x89 && decoded[1] == 0x50: // PNG
-		return "image/png"
-	case decoded[0] == 0xFF && decoded[1] == 0xD8: // JPEG
-		return "image/jpeg"
-	default:
-		return "application/pdf"
-	}
 }
 
 func errorResponse(code int, msg string, headers map[string]string) events.LambdaFunctionURLResponse {
