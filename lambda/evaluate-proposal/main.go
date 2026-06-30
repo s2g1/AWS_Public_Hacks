@@ -75,15 +75,12 @@ type BedrockResponse struct {
 }
 
 func handler(ctx context.Context, request events.LambdaFunctionURLRequest) (events.LambdaFunctionURLResponse, error) {
-	// CORS headers
+	// Headers — CORS is handled by Lambda Function URL config, only set Content-Type
 	headers := map[string]string{
-		"Content-Type":                "application/json",
-		"Access-Control-Allow-Origin": "*",
-		"Access-Control-Allow-Headers": "Content-Type",
-		"Access-Control-Allow-Methods": "POST, OPTIONS",
+		"Content-Type": "application/json",
 	}
 
-	// Handle preflight
+	// Handle preflight (shouldn't reach here since Function URL handles OPTIONS)
 	if request.RequestContext.HTTP.Method == "OPTIONS" {
 		return events.LambdaFunctionURLResponse{StatusCode: 200, Headers: headers}, nil
 	}
