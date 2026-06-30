@@ -109,17 +109,21 @@ func handler(ctx context.Context, request events.LambdaFunctionURLRequest) (even
 	// Build content blocks
 	contentBlocks := []ContentBlock{}
 
-	// If document is provided, include it
+	// If document is provided AND is a supported image type, include it
 	if req.DocumentBase64 != "" {
 		mediaType := detectMediaType(req.DocumentBase64)
-		contentBlocks = append(contentBlocks, ContentBlock{
-			Type: "image",
-			Source: &ImageSource{
-				Type:      "base64",
-				MediaType: mediaType,
-				Data:      req.DocumentBase64,
-			},
-		})
+		// Only attach as image if it's a supported image format
+		if mediaType == "image/jpeg" || mediaType == "image/png" || mediaType == "image/gif" || mediaType == "image/webp" {
+			contentBlocks = append(contentBlocks, ContentBlock{
+				Type: "image",
+				Source: &ImageSource{
+					Type:      "base64",
+					MediaType: mediaType,
+					Data:      req.DocumentBase64,
+				},
+			})
+		}
+		// For PDFs/docs, we rely on the proposalText and other fields in the prompt
 	}
 
 	contentBlocks = append(contentBlocks, ContentBlock{
