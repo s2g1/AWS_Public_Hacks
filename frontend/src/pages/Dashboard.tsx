@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { useAppContext, Notification } from '../store/AppContext'
+import { useAppContext, Notification, HistoryEntry } from '../store/AppContext'
 
 // --- Types ---
 
@@ -55,6 +55,27 @@ function getNotifIcon(type: Notification['type']): string {
   }
 }
 
+function getActionIcon(action: string): string {
+  const lower = action.toLowerCase()
+  if (lower.includes('solicitation')) return '📋'
+  if (lower.includes('proposal')) return '📝'
+  if (lower.includes('invoice')) return '🧾'
+  if (lower.includes('payment')) return '💳'
+  if (lower.includes('mod')) return '🔧'
+  if (lower.includes('approved') || lower.includes('approve')) return '✅'
+  if (lower.includes('rejected') || lower.includes('reject')) return '❌'
+  return '📄'
+}
+
+function formatTimestamp(ts: string): string {
+  return new Date(ts).toLocaleString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  })
+}
+
 // --- Components ---
 
 function StatCard({ label, value, icon, accent }: { label: string; value: number | string; icon: string; accent: string }) {
@@ -86,13 +107,55 @@ function ObligationBar({ label, value, total, color }: { label: string; value: n
   )
 }
 
-// --- Notifications Section ---
+// --- Notifications Section (Enhanced with action buttons) ---
 
-function NotificationsSection({ notifications, onMarkRead }: { notifications: Notification[]; onMarkRead: (id: string) => void }) {
+function NotificationsSection({ notifications, onMarkRead, isGov }: { notifications: Notification[]; onMarkRead: (id: string) => void; isGov: boolean }) {
   const [expanded, setExpanded] = useState(true)
   const unreadCount = notifications.filter(n => !n.read).length
 
   if (notifications.length === 0) return null
+
+  function getActionButtons(notif: Notification) {
+    if (notif.type !== 'action_required') return null
+
+    if (isGov) {
+      // GOV sees action buttons for proposals, invoices, mods from vendors
+      const relatedId = notif.relatedId || ''
+      let viewLink = '/contracts'
+      if (relatedId.startsWith('prop')) viewLink = '/solicitations'
+      else if (relatedId.startsWith('inv')) viewLink = '/payments'
+      else if (relatedId.startsWith('mod')) viewLink = '/contracts'
+      else if (relatedId.startsWith('contract')) viewLink = '/contracts'
+
+      return (
+        <div className="flex items-center gap-2 mt-2">
+          <Link to={viewLink} className="px-2.5 py-1 text-xs font-medium rounded bg-blue-100 text-blue-700 hover:bg-blue-200 transition-colors">
+            View
+          </Link>
+          <Link to={viewLink} className="px-2.5 py-1 text-xs font-medium rounded bg-green-100 text-green-700 hover:bg-green-200 transition-colors">
+            Approve
+          </Link>
+          <Link to={viewLink} className="px-2.5 py-1 text-xs font-medium rounded bg-red-100 text-red-700 hover:bg-red-200 transition-colors">
+            Reject
+          </Link>
+        </div>
+      )
+    } else {
+      // VENDOR sees View button linking to relevant page
+      const relatedId = notif.relatedId || ''
+      let viewLink = '/contracts'
+      if (relatedId.startsWith('sol')) viewLink = '/solicitations'
+      else if (relatedId.startsWith('contract')) viewLink = '/contracts'
+
+      return (
+        <div className="flex items-center gap-2 mt-2">
+          <Link to={viewLink} className="px-2.5 py-1 text-xs font-medium rounded bg-blue-100 text-blue-700 hover:bg-blue-200 transition-colors">
+            View
+          </Link>
+        </div>
+      )
+    }
+  }
 
   return (
     <div className="bg-white rounded-lg shadow-sm border border-gray-200 mb-6">
@@ -113,7 +176,7 @@ function NotificationsSection({ notifications, onMarkRead }: { notifications: No
       </button>
 
       {expanded && (
-        <div className="border-t border-gray-200 divide-y divide-gray-100 max-h-64 overflow-y-auto">
+        <div className="border-t border-gray-200 divide-y divide-gray-100 max-h-72 overflow-y-auto">
           {notifications.slice(0, 10).map((notif) => (
             <div
               key={notif.id}
@@ -127,6 +190,7 @@ function NotificationsSection({ notifications, onMarkRead }: { notifications: No
                 <p className="text-xs text-gray-400 mt-0.5">
                   {new Date(notif.createdAt).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
                 </p>
+                {getActionButtons(notif)}
               </div>
               {!notif.read && (
                 <button
@@ -144,6 +208,136 @@ function NotificationsSection({ notifications, onMarkRead }: { notifications: No
   )
 }
 
+// --- Quick Actions Section ---
+
+function QuickActionsSection({ actionNotifications, isGov, openSolicitations, totalContracts }: { actionNotifications: Notification[]; isGov: boolean; openSolicitations: number; totalContracts: number }) {
+  if (actionNotifications.length === 0) {
+    // No pending actions — show fallback links
+    return (
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 sm:p-5">
+        <h2 className="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h2>
+        <p className="text-sm text-gray-500 mb-4">N/A — No pending actions</p>
+        <div className="space-y-3">
+          <Link
+            to="/solicitations"
+            className="flex items-center gap-3 w-full p-3 rounded-lg border border-gray-200 hover:bg-blue-50 hover:border-blue-300 transition-colors text-left"
+          >
+            <span className="flex items-center justify-center w-9 h-9 rounded-lg bg-blue-100 text-blue-600 text-lg" aria-hidden="true">📋</span>
+            <div>
+              <p className="text-sm font-medium text-gray-900">Solicitations</p>
+              <p className="text-xs text-gray-500">{openSolicitations} open opportunities</p>
+            </div>
+          </Link>
+          <Link
+            to="/contracts"
+            className="flex items-center gap-3 w-full p-3 rounded-lg border border-gray-200 hover:bg-green-50 hover:border-green-300 transition-colors text-left"
+          >
+            <span className="flex items-center justify-center w-9 h-9 rounded-lg bg-green-100 text-green-600 text-lg" aria-hidden="true">📄</span>
+            <div>
+              <p className="text-sm font-medium text-gray-900">Contracts</p>
+              <p className="text-xs text-gray-500">{totalContracts} active contracts</p>
+            </div>
+          </Link>
+          <Link
+            to="/history"
+            className="flex items-center gap-3 w-full p-3 rounded-lg border border-gray-200 hover:bg-purple-50 hover:border-purple-300 transition-colors text-left"
+          >
+            <span className="flex items-center justify-center w-9 h-9 rounded-lg bg-purple-100 text-purple-600 text-lg" aria-hidden="true">📜</span>
+            <div>
+              <p className="text-sm font-medium text-gray-900">History</p>
+              <p className="text-xs text-gray-500">View your action history</p>
+            </div>
+          </Link>
+        </div>
+      </div>
+    )
+  }
+
+  // Show actionable notifications with quick-action buttons
+  return (
+    <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 sm:p-5">
+      <h2 className="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h2>
+      <div className="space-y-3">
+        {actionNotifications.slice(0, 5).map((notif) => {
+          const relatedId = notif.relatedId || ''
+          let viewLink = '/contracts'
+          if (isGov) {
+            if (relatedId.startsWith('prop')) viewLink = '/solicitations'
+            else if (relatedId.startsWith('inv')) viewLink = '/payments'
+            else if (relatedId.startsWith('mod')) viewLink = '/contracts'
+            else if (relatedId.startsWith('contract')) viewLink = '/contracts'
+          } else {
+            if (relatedId.startsWith('sol')) viewLink = '/solicitations'
+            else if (relatedId.startsWith('contract')) viewLink = '/contracts'
+          }
+
+          return (
+            <div key={notif.id} className="p-3 rounded-lg border border-orange-200 bg-orange-50/50">
+              <div className="flex items-start gap-2">
+                <span className="text-base flex-shrink-0 mt-0.5" aria-hidden="true">⚡</span>
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-medium text-gray-900">{notif.message}</p>
+                  <div className="flex items-center gap-2 mt-2">
+                    {isGov ? (
+                      <>
+                        <Link to={viewLink} className="px-2.5 py-1 text-xs font-medium rounded bg-blue-100 text-blue-700 hover:bg-blue-200 transition-colors">
+                          View
+                        </Link>
+                        <Link to={viewLink} className="px-2.5 py-1 text-xs font-medium rounded bg-green-100 text-green-700 hover:bg-green-200 transition-colors">
+                          Approve
+                        </Link>
+                        <Link to={viewLink} className="px-2.5 py-1 text-xs font-medium rounded bg-red-100 text-red-700 hover:bg-red-200 transition-colors">
+                          Reject
+                        </Link>
+                      </>
+                    ) : (
+                      <Link to={viewLink} className="px-2.5 py-1 text-xs font-medium rounded bg-blue-100 text-blue-700 hover:bg-blue-200 transition-colors">
+                        View
+                      </Link>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
+// --- Recent Activity Section (from state.history) ---
+
+function RecentActivitySection({ entries }: { entries: HistoryEntry[] }) {
+  return (
+    <div className="lg:col-span-2 bg-white rounded-lg shadow-sm border border-gray-200 p-4 sm:p-5">
+      <h2 className="text-lg font-semibold text-gray-900 mb-4">Recent Activity</h2>
+      <div className="space-y-3">
+        {entries.length === 0 ? (
+          <p className="text-sm text-gray-500 py-4 text-center">No recent activity. Start by creating a solicitation or submitting a proposal.</p>
+        ) : (
+          entries.map((entry) => (
+            <div key={entry.id} className="flex items-start gap-3 p-3 bg-gray-50 rounded-lg border-l-4 border-l-blue-400">
+              <span className="text-base flex-shrink-0 mt-0.5" aria-hidden="true">
+                {getActionIcon(entry.action)}
+              </span>
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="text-sm font-semibold text-gray-900">{entry.action}</span>
+                  <span className="text-xs text-gray-400">•</span>
+                  <span className="text-xs text-gray-500">{entry.actorName}</span>
+                </div>
+                <p className="mt-0.5 text-sm text-gray-600">{entry.details}</p>
+                <p className="mt-1 text-xs text-gray-400">{formatTimestamp(entry.timestamp)}</p>
+              </div>
+            </div>
+          ))
+        )}
+      </div>
+    </div>
+  )
+}
+
 // --- Main Component ---
 
 function Dashboard() {
@@ -156,6 +350,9 @@ function Dashboard() {
     if (state.currentRole === 'VENDOR' && n.targetCompany && n.targetCompany !== state.vendorCompany) return false
     return true
   })
+
+  // Action-required notifications for Quick Actions
+  const actionNotifications = myNotifications.filter(n => n.type === 'action_required' && !n.read)
 
   // Compute real stats from state
   const visibleContracts = isGov
@@ -172,179 +369,33 @@ function Dashboard() {
   const totalObligated = visibleContracts.reduce((sum, c) => sum + c.totalObligated, 0)
   const totalExpended = visibleContracts.reduce((sum, c) => sum + c.totalExpended, 0)
 
-  // Recent activity derived from state
-  const recentActivity: { id: string; description: string; type: 'payment' | 'contract' | 'alert' | 'info'; status: 'success' | 'warning' | 'error' | 'info' }[] = []
+  // Recent activity from state.history (filtered by current role), last 8, most recent first
+  const recentHistoryEntries = state.history
+    .filter(h => h.actor === state.currentRole)
+    .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
+    .slice(0, 8)
 
-  for (const p of state.payments.slice(-3).reverse()) {
-    recentActivity.push({
-      id: p.id,
-      description: `Payment ${p.id} ${p.status === 'DISBURSED' ? 'disbursed' : 'processing'} (${formatCurrency(p.amount)})`,
-      type: 'payment',
-      status: 'success',
-    })
-  }
-
-  for (const inv of state.invoices.filter(i => i.status === 'FLAGGED').slice(-2)) {
-    recentActivity.push({
-      id: inv.id,
-      description: `Invoice ${inv.id} flagged: ${inv.complianceIssues?.[0] || 'Compliance issue'}`,
-      type: 'alert',
-      status: 'warning',
-    })
-  }
-
-  for (const prop of state.proposals.filter(p => p.status === 'SUBMITTED').slice(-2)) {
-    recentActivity.push({
-      id: prop.id,
-      description: `Proposal from ${prop.companyName} pending review`,
-      type: 'info',
-      status: 'info',
-    })
-  }
-
-  for (const c of visibleContracts.slice(-2).reverse()) {
-    recentActivity.push({
-      id: c.id,
-      description: `Contract ${c.contractNumber} awarded to ${c.contractor}`,
-      type: 'contract',
-      status: 'success',
-    })
-  }
-
+  // System status
   const agents = sampleAgents
   const totalThroughput = agents.reduce((sum, a) => sum + a.throughput, 0)
 
-  function getActivityIcon(type: string): string {
-    switch (type) {
-      case 'payment': return '💳'
-      case 'contract': return '📄'
-      case 'alert': return '🚨'
-      default: return '📋'
-    }
-  }
-
-  function getActivityBorderClass(status: string): string {
-    switch (status) {
-      case 'success': return 'border-l-green-500'
-      case 'warning': return 'border-l-yellow-500'
-      case 'error': return 'border-l-red-500'
-      default: return 'border-l-blue-500'
-    }
-  }
-
   return (
     <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto">
-      {/* Header */}
+      {/* 1. Header */}
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
         <p className="mt-1 text-sm text-gray-600">
           Federal Payment Processing Overview — {isGov ? '🏛️ Government View' : '🏢 Vendor View'}
+          {' • '}
+          <span className="font-medium text-gray-700">
+            {isGov ? 'Gov1 (AFRL)' : `Vendor1 (${state.vendorCompany})`}
+          </span>
         </p>
       </div>
 
-      {/* Notifications */}
-      <NotificationsSection notifications={myNotifications} onMarkRead={markNotificationRead} />
-
-      {/* Summary Statistics Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-        <StatCard label="Total Contracts" value={totalContracts} icon="📑" accent="border-blue-500" />
-        <StatCard label="Open Solicitations" value={openSolicitations} icon="📋" accent="border-green-500" />
-        <StatCard label="Pending Proposals" value={pendingProposals} icon="📝" accent="border-yellow-500" />
-        <StatCard label={flaggedInvoices > 0 ? 'Flagged Invoices' : 'Disbursed Payments'} value={flaggedInvoices > 0 ? flaggedInvoices : disbursedPayments} icon={flaggedInvoices > 0 ? '⚠️' : '💳'} accent={flaggedInvoices > 0 ? 'border-red-500' : 'border-purple-500'} />
-      </div>
-
-      {/* Main content grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-        {/* Recent Activity Feed */}
-        <div className="lg:col-span-2 bg-white rounded-lg shadow-sm border border-gray-200 p-4 sm:p-5">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">Recent Activity</h2>
-          <div className="space-y-3">
-            {recentActivity.length === 0 ? (
-              <p className="text-sm text-gray-500 py-4 text-center">No recent activity. Start by creating a solicitation or submitting a proposal.</p>
-            ) : (
-              recentActivity.slice(0, 6).map((item) => (
-                <div key={item.id} className={`border-l-4 ${getActivityBorderClass(item.status)} bg-gray-50 rounded-r-lg p-3`}>
-                  <div className="flex items-start gap-2">
-                    <span className="text-base flex-shrink-0" aria-hidden="true">{getActivityIcon(item.type)}</span>
-                    <p className="text-sm text-gray-800">{item.description}</p>
-                  </div>
-                </div>
-              ))
-            )}
-          </div>
-        </div>
-
-        {/* Quick Actions + System Status */}
-        <div className="space-y-6">
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 sm:p-5">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h2>
-            <div className="space-y-3">
-              <Link
-                to="/solicitations"
-                className="flex items-center gap-3 w-full p-3 rounded-lg border border-gray-200 hover:bg-blue-50 hover:border-blue-300 transition-colors text-left"
-              >
-                <span className="flex items-center justify-center w-9 h-9 rounded-lg bg-blue-100 text-blue-600 text-lg" aria-hidden="true">📋</span>
-                <div>
-                  <p className="text-sm font-medium text-gray-900">Solicitations</p>
-                  <p className="text-xs text-gray-500">{openSolicitations} open opportunities</p>
-                </div>
-              </Link>
-              <Link
-                to="/contracts"
-                className="flex items-center gap-3 w-full p-3 rounded-lg border border-gray-200 hover:bg-green-50 hover:border-green-300 transition-colors text-left"
-              >
-                <span className="flex items-center justify-center w-9 h-9 rounded-lg bg-green-100 text-green-600 text-lg" aria-hidden="true">📄</span>
-                <div>
-                  <p className="text-sm font-medium text-gray-900">Contracts</p>
-                  <p className="text-xs text-gray-500">{totalContracts} active contracts</p>
-                </div>
-              </Link>
-              <Link
-                to="/history"
-                className="flex items-center gap-3 w-full p-3 rounded-lg border border-gray-200 hover:bg-purple-50 hover:border-purple-300 transition-colors text-left"
-              >
-                <span className="flex items-center justify-center w-9 h-9 rounded-lg bg-purple-100 text-purple-600 text-lg" aria-hidden="true">📜</span>
-                <div>
-                  <p className="text-sm font-medium text-gray-900">History</p>
-                  <p className="text-xs text-gray-500">View your action history</p>
-                </div>
-              </Link>
-            </div>
-          </div>
-
-          {/* System Status */}
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 sm:p-5">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-semibold text-gray-900">System Status</h2>
-              <span className="text-xs text-gray-500">{totalThroughput} msg/min</span>
-            </div>
-            <div className="space-y-3">
-              {agents.map((agent) => (
-                <div key={agent.name} className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <span className={`w-2 h-2 rounded-full ${getStatusDotClass(agent.status)}`} aria-hidden="true" />
-                    <span className="text-sm text-gray-700">{agent.name}</span>
-                  </div>
-                  <div className="flex items-center gap-3 text-xs text-gray-500">
-                    <span>{agent.throughput} msg/min</span>
-                    <span className={`px-1.5 py-0.5 rounded text-xs font-medium ${
-                      agent.status === 'healthy' ? 'bg-green-100 text-green-700' :
-                      agent.status === 'degraded' ? 'bg-yellow-100 text-yellow-700' :
-                      'bg-red-100 text-red-700'
-                    }`}>
-                      {getStatusLabel(agent.status)}
-                    </span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Obligation Tracking Summary */}
+      {/* 2. Obligation Tracking Summary (moved up) */}
       {totalContracts > 0 && (
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 sm:p-6">
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 sm:p-6 mb-6">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-5">
             <div>
               <h2 className="text-lg font-semibold text-gray-900">Obligation Tracking Summary</h2>
@@ -395,6 +446,56 @@ function Dashboard() {
           </div>
         </div>
       )}
+
+      {/* 3. Notifications (with action buttons) */}
+      <NotificationsSection notifications={myNotifications} onMarkRead={markNotificationRead} isGov={isGov} />
+
+      {/* 4. Stats Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+        <StatCard label="Total Contracts" value={totalContracts} icon="📑" accent="border-blue-500" />
+        <StatCard label="Open Solicitations" value={openSolicitations} icon="📋" accent="border-green-500" />
+        <StatCard label="Pending Proposals" value={pendingProposals} icon="📝" accent="border-yellow-500" />
+        <StatCard label={flaggedInvoices > 0 ? 'Flagged Invoices' : 'Disbursed Payments'} value={flaggedInvoices > 0 ? flaggedInvoices : disbursedPayments} icon={flaggedInvoices > 0 ? '⚠️' : '💳'} accent={flaggedInvoices > 0 ? 'border-red-500' : 'border-purple-500'} />
+      </div>
+
+      {/* 5. Main grid: Recent Activity (left) + Quick Actions (right) */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+        <RecentActivitySection entries={recentHistoryEntries} />
+        <QuickActionsSection
+          actionNotifications={actionNotifications}
+          isGov={isGov}
+          openSolicitations={openSolicitations}
+          totalContracts={totalContracts}
+        />
+      </div>
+
+      {/* 6. System Status (very bottom) */}
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 sm:p-5">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-lg font-semibold text-gray-900">System Status</h2>
+          <span className="text-xs text-gray-500">{totalThroughput} msg/min</span>
+        </div>
+        <div className="space-y-3">
+          {agents.map((agent) => (
+            <div key={agent.name} className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <span className={`w-2 h-2 rounded-full ${getStatusDotClass(agent.status)}`} aria-hidden="true" />
+                <span className="text-sm text-gray-700">{agent.name}</span>
+              </div>
+              <div className="flex items-center gap-3 text-xs text-gray-500">
+                <span>{agent.throughput} msg/min</span>
+                <span className={`px-1.5 py-0.5 rounded text-xs font-medium ${
+                  agent.status === 'healthy' ? 'bg-green-100 text-green-700' :
+                  agent.status === 'degraded' ? 'bg-yellow-100 text-yellow-700' :
+                  'bg-red-100 text-red-700'
+                }`}>
+                  {getStatusLabel(agent.status)}
+                </span>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
     </div>
   )
 }
