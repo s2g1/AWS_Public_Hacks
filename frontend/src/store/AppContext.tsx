@@ -79,13 +79,51 @@ export interface Payment {
   disbursedAt?: string
 }
 
+export interface Notification {
+  id: string
+  targetRole: 'GOV' | 'VENDOR'
+  targetCompany?: string
+  message: string
+  type: 'info' | 'action_required' | 'success' | 'warning'
+  relatedId?: string
+  createdAt: string
+  read: boolean
+}
+
+export interface HistoryEntry {
+  id: string
+  actor: 'GOV' | 'VENDOR'
+  actorName: string
+  action: string
+  details: string
+  timestamp: string
+  relatedId?: string
+}
+
+export interface ContractMod {
+  id: string
+  contractId: string
+  type: 'REA' | 'ECP' | 'GOV_MOD'
+  requestedBy: 'GOV' | 'VENDOR'
+  title: string
+  description: string
+  amount: number
+  status: 'SUBMITTED' | 'UNDER_REVIEW' | 'APPROVED' | 'REJECTED'
+  submittedAt: string
+  resolvedAt?: string
+}
+
 export interface AppState {
   currentRole: 'GOV' | 'VENDOR'
+  vendorCompany: string
   solicitations: Solicitation[]
   proposals: Proposal[]
   contracts: Contract[]
   invoices: Invoice[]
   payments: Payment[]
+  notifications: Notification[]
+  history: HistoryEntry[]
+  contractMods: ContractMod[]
 }
 
 // --- Context Interface ---
@@ -101,6 +139,10 @@ interface AppContextValue {
   submitInvoice: (contractId: string, clinNumber: string, amount: number, description: string) => void
   approveInvoice: (invoiceId: string, justification?: string) => void
   rejectInvoice: (invoiceId: string, reason: string) => void
+  submitContractMod: (contractId: string, type: 'REA' | 'ECP' | 'GOV_MOD', title: string, description: string, amount: number) => void
+  approveContractMod: (modId: string) => void
+  rejectContractMod: (modId: string) => void
+  markNotificationRead: (id: string) => void
 }
 
 const STORAGE_KEY = 'fedpay_app_state'
@@ -110,6 +152,7 @@ const STORAGE_KEY = 'fedpay_app_state'
 function createSeedData(): AppState {
   return {
     currentRole: 'GOV',
+    vendorCompany: 'Quantum Federal Systems LLC',
     solicitations: [
       {
         id: 'sol-1',
@@ -117,7 +160,7 @@ function createSeedData(): AppState {
         title: 'Agentic AI for Federal Payment Modernization',
         type: 'SBIR Phase II',
         agency: 'AFRL / Air Force Research Laboratory',
-        description: 'The Air Force Research Laboratory seeks innovative solutions leveraging agentic AI architectures to modernize federal payment processing systems. The solution must demonstrate autonomous document extraction, intelligent validation, and adaptive disbursement routing capabilities while maintaining FedRAMP High compliance.',
+        description: 'The Air Force Research Laboratory seeks innovative solutions leveraging agentic AI architectures to modernize federal payment processing systems.',
         naicsCode: '541512',
         estimatedValue: '$750K - $1.5M',
         closeDate: '2025-01-15',
@@ -133,7 +176,7 @@ function createSeedData(): AppState {
         title: 'Next-Generation Document Intelligence Platform',
         type: 'Full & Open Competition',
         agency: 'AFRL / Air Force Research Laboratory',
-        description: 'AFRL requires a cloud-native document intelligence platform capable of processing unstructured federal financial documents at scale. The platform must support OCR, NLP-based entity extraction, automated classification, and integration with existing Treasury systems. Must achieve 99.5% accuracy on standard government form types (SF-1034, SF-1035, DD-250).',
+        description: 'AFRL requires a cloud-native document intelligence platform capable of processing unstructured federal financial documents at scale.',
         naicsCode: '541511',
         estimatedValue: '$2.5M - $5M',
         closeDate: '2025-07-15',
@@ -178,9 +221,86 @@ function createSeedData(): AppState {
           { clinNumber: '0002', description: 'Phase III Option - Production Pilot', type: 'CPFF', ceiling: 499920, obligated: 0, expended: 0 },
         ],
       },
+      {
+        id: 'contract-2',
+        contractNumber: 'FA8750-24-F-0092',
+        title: 'Legacy System Integration Connector',
+        contractor: 'Atlas Defense Technologies',
+        proposalId: 'prop-atlas-1',
+        solicitationId: 'sol-atlas-1',
+        status: 'ACTIVE',
+        popStart: '2024-06-01',
+        popEnd: '2025-06-01',
+        totalCeiling: 890000,
+        totalObligated: 890000,
+        totalExpended: 445000,
+        clins: [
+          { clinNumber: '0001', description: 'Integration Services', type: 'FFP', ceiling: 890000, obligated: 890000, expended: 445000 },
+        ],
+      },
     ],
     invoices: [],
     payments: [],
+    notifications: [
+      {
+        id: 'notif-seed-1',
+        targetRole: 'VENDOR',
+        targetCompany: 'Quantum Federal Systems LLC',
+        message: 'Your proposal for "Agentic AI for Federal Payment Modernization" has been approved! Contract FA8750-25-F-0018 created.',
+        type: 'success',
+        relatedId: 'contract-1',
+        createdAt: '2025-01-02T10:00:00Z',
+        read: true,
+      },
+      {
+        id: 'notif-seed-2',
+        targetRole: 'GOV',
+        message: 'New proposal received from Quantum Federal Systems LLC for "Agentic AI for Federal Payment Modernization"',
+        type: 'action_required',
+        relatedId: 'prop-1',
+        createdAt: '2025-01-10T14:30:00Z',
+        read: true,
+      },
+      {
+        id: 'notif-seed-3',
+        targetRole: 'VENDOR',
+        message: 'New solicitation published: "Next-Generation Document Intelligence Platform"',
+        type: 'info',
+        relatedId: 'sol-2',
+        createdAt: '2025-06-01T08:00:00Z',
+        read: false,
+      },
+    ],
+    history: [
+      {
+        id: 'hist-seed-1',
+        actor: 'GOV',
+        actorName: 'Contracting Officer',
+        action: 'Solicitation Published',
+        details: 'Published "Agentic AI for Federal Payment Modernization" (FA8750-25-SBIR-0042)',
+        timestamp: '2024-12-15T09:00:00Z',
+        relatedId: 'sol-1',
+      },
+      {
+        id: 'hist-seed-2',
+        actor: 'VENDOR',
+        actorName: 'Quantum Federal Systems LLC',
+        action: 'Proposal Submitted',
+        details: 'Submitted proposal for "Agentic AI for Federal Payment Modernization" — $1,249,800',
+        timestamp: '2025-01-10T14:30:00Z',
+        relatedId: 'prop-1',
+      },
+      {
+        id: 'hist-seed-3',
+        actor: 'GOV',
+        actorName: 'Contracting Officer',
+        action: 'Proposal Approved',
+        details: 'Approved proposal from Quantum Federal Systems LLC. Contract FA8750-25-F-0018 created.',
+        timestamp: '2025-01-02T10:00:00Z',
+        relatedId: 'contract-1',
+      },
+    ],
+    contractMods: [],
   }
 }
 
@@ -190,7 +310,13 @@ function loadState(): AppState {
   try {
     const stored = localStorage.getItem(STORAGE_KEY)
     if (stored) {
-      return JSON.parse(stored) as AppState
+      const parsed = JSON.parse(stored) as AppState
+      // Ensure new fields exist (migration)
+      if (!parsed.notifications) parsed.notifications = []
+      if (!parsed.history) parsed.history = []
+      if (!parsed.contractMods) parsed.contractMods = []
+      if (!parsed.vendorCompany) parsed.vendorCompany = 'Quantum Federal Systems LLC'
+      return parsed
     }
   } catch {
     // If corrupted, fall through to seed
@@ -222,6 +348,51 @@ function runComplianceCheck(invoice: { amount: number; clinNumber: string; contr
   }
 
   return issues
+}
+
+// --- Helper: create notification ---
+
+function addNotification(
+  notifications: Notification[],
+  targetRole: 'GOV' | 'VENDOR',
+  message: string,
+  type: Notification['type'],
+  relatedId?: string,
+  targetCompany?: string,
+): Notification[] {
+  const notif: Notification = {
+    id: `notif-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+    targetRole,
+    targetCompany,
+    message,
+    type,
+    relatedId,
+    createdAt: new Date().toISOString(),
+    read: false,
+  }
+  return [notif, ...notifications]
+}
+
+// --- Helper: create history entry ---
+
+function addHistory(
+  history: HistoryEntry[],
+  actor: 'GOV' | 'VENDOR',
+  actorName: string,
+  action: string,
+  details: string,
+  relatedId?: string,
+): HistoryEntry[] {
+  const entry: HistoryEntry = {
+    id: `hist-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+    actor,
+    actorName,
+    action,
+    details,
+    timestamp: new Date().toISOString(),
+    relatedId,
+  }
+  return [entry, ...history]
 }
 
 // --- Context ---
@@ -263,16 +434,23 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setState(prev => ({
       ...prev,
       solicitations: [newSol, ...prev.solicitations],
+      history: addHistory(prev.history, 'GOV', 'Contracting Officer', 'Solicitation Created', `Created draft solicitation: "${data.title}" (${solNum})`, id),
     }))
   }, [])
 
   const publishSolicitation = useCallback((id: string) => {
-    setState(prev => ({
-      ...prev,
-      solicitations: prev.solicitations.map(s =>
-        s.id === id && s.status === 'DRAFT' ? { ...s, status: 'OPEN' as const } : s
-      ),
-    }))
+    setState(prev => {
+      const sol = prev.solicitations.find(s => s.id === id)
+      if (!sol || sol.status !== 'DRAFT') return prev
+      return {
+        ...prev,
+        solicitations: prev.solicitations.map(s =>
+          s.id === id ? { ...s, status: 'OPEN' as const } : s
+        ),
+        notifications: addNotification(prev.notifications, 'VENDOR', `New solicitation published: "${sol.title}"`, 'info', id),
+        history: addHistory(prev.history, 'GOV', 'Contracting Officer', 'Solicitation Published', `Published "${sol.title}" (${sol.solicitationNumber})`, id),
+      }
+    })
   }, [])
 
   const submitProposal = useCallback((solicitationId: string, data: Omit<Proposal, 'id' | 'solicitationId' | 'submittedAt' | 'status'>) => {
@@ -284,10 +462,15 @@ export function AppProvider({ children }: { children: ReactNode }) {
       submittedAt: new Date().toISOString(),
       status: 'SUBMITTED',
     }
-    setState(prev => ({
-      ...prev,
-      proposals: [...prev.proposals, newProposal],
-    }))
+    setState(prev => {
+      const sol = prev.solicitations.find(s => s.id === solicitationId)
+      return {
+        ...prev,
+        proposals: [...prev.proposals, newProposal],
+        notifications: addNotification(prev.notifications, 'GOV', `New proposal received from ${data.companyName} for "${sol?.title || 'Unknown'}"`, 'action_required', id),
+        history: addHistory(prev.history, 'VENDOR', data.companyName, 'Proposal Submitted', `Submitted proposal for "${sol?.title || 'Unknown'}" — $${data.priceProposal.toLocaleString()}`, id),
+      }
+    })
   }, [])
 
   const approveProposal = useCallback((proposalId: string) => {
@@ -298,7 +481,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
       const solicitation = prev.solicitations.find(s => s.id === proposal.solicitationId)
       if (!solicitation) return prev
 
-      // Create contract from proposal
       const contractId = `contract-${Date.now()}`
       const contractNumber = `FA8750-25-F-${String(Math.floor(Math.random() * 9000) + 1000)}`
       const clins: CLINItem[] = proposal.clinStructure || [
@@ -342,6 +524,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
             : s
         ),
         contracts: [...prev.contracts, newContract],
+        notifications: addNotification(prev.notifications, 'VENDOR', `Your proposal for "${solicitation.title}" has been approved! Contract ${contractNumber} created.`, 'success', contractId, proposal.companyName),
+        history: addHistory(prev.history, 'GOV', 'Contracting Officer', 'Proposal Approved', `Approved proposal from ${proposal.companyName}. Contract ${contractNumber} created.`, contractId),
       }
     })
   }, [])
@@ -352,20 +536,27 @@ export function AppProvider({ children }: { children: ReactNode }) {
       proposals: prev.proposals.map(p =>
         p.id === proposalId ? { ...p, status: 'REJECTED' as const } : p
       ),
+      history: addHistory(prev.history, 'GOV', 'Contracting Officer', 'Proposal Rejected', `Rejected proposal ${proposalId}`, proposalId),
     }))
   }, [])
 
   const submitInvoice = useCallback((contractId: string, clinNumber: string, amount: number, description: string) => {
     setState(prev => {
       const id = `inv-${Date.now()}`
+      const contract = prev.contracts.find(c => c.id === contractId)
       const issues = runComplianceCheck({ amount, clinNumber, contractId }, prev.contracts)
 
       let invoiceStatus: Invoice['status']
       let newPayments = prev.payments
       let updatedContracts = prev.contracts
+      let newNotifications = prev.notifications
+      let newHistory = prev.history
+
+      // Notify GOV about invoice submission
+      newNotifications = addNotification(newNotifications, 'GOV', `Invoice submitted for ${contract?.contractNumber || contractId} - $${amount.toLocaleString()}`, 'action_required', id)
+      newHistory = addHistory(newHistory, 'VENDOR', contract?.contractor || 'Vendor', 'Invoice Submitted', `Submitted invoice for $${amount.toLocaleString()} on ${contract?.contractNumber || contractId} (CLIN ${clinNumber})`, id)
 
       if (issues.length === 0) {
-        // Auto-approve and create payment
         invoiceStatus = 'DISBURSED'
         const paymentId = `pay-${Date.now()}`
         newPayments = [...prev.payments, {
@@ -376,7 +567,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
           status: 'DISBURSED' as const,
           disbursedAt: new Date().toISOString(),
         }]
-        // Update CLIN expended amount
         updatedContracts = prev.contracts.map(c => {
           if (c.id !== contractId) return c
           const updatedClins = c.clins.map(cl =>
@@ -388,8 +578,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
             totalExpended: updatedClins.reduce((sum, cl) => sum + cl.expended, 0),
           }
         })
+        // Notify vendor of disbursement
+        newNotifications = addNotification(newNotifications, 'VENDOR', `Payment of $${amount.toLocaleString()} disbursed for ${contract?.contractNumber || contractId}`, 'success', paymentId, contract?.contractor)
+        newHistory = addHistory(newHistory, 'VENDOR', contract?.contractor || 'Vendor', 'Payment Received', `Payment of $${amount.toLocaleString()} disbursed for ${contract?.contractNumber || contractId}`, paymentId)
       } else {
         invoiceStatus = 'FLAGGED'
+        newNotifications = addNotification(newNotifications, 'GOV', `Invoice flagged for review: ${issues[0]}`, 'warning', id)
       }
 
       const newInvoice: Invoice = {
@@ -408,6 +602,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
         invoices: [...prev.invoices, newInvoice],
         payments: newPayments,
         contracts: updatedContracts,
+        notifications: newNotifications,
+        history: newHistory,
       }
     })
   }, [])
@@ -417,6 +613,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       const invoice = prev.invoices.find(i => i.id === invoiceId)
       if (!invoice || invoice.status !== 'FLAGGED') return prev
 
+      const contract = prev.contracts.find(c => c.id === invoice.contractId)
       const paymentId = `pay-${Date.now()}`
       const newPayment: Payment = {
         id: paymentId,
@@ -427,7 +624,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
         disbursedAt: new Date().toISOString(),
       }
 
-      // Update CLIN expended
       const updatedContracts = prev.contracts.map(c => {
         if (c.id !== invoice.contractId) return c
         const updatedClins = c.clins.map(cl =>
@@ -447,6 +643,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
         ),
         payments: [...prev.payments, newPayment],
         contracts: updatedContracts,
+        notifications: addNotification(prev.notifications, 'VENDOR', `Payment of $${invoice.amount.toLocaleString()} approved and disbursed for ${contract?.contractNumber || invoice.contractId}`, 'success', paymentId, contract?.contractor),
+        history: addHistory(prev.history, 'GOV', 'Contracting Officer', 'Invoice Approved', `Approved flagged invoice for $${invoice.amount.toLocaleString()} on ${contract?.contractNumber || invoice.contractId}`, invoiceId),
       }
     })
   }, [])
@@ -456,6 +654,88 @@ export function AppProvider({ children }: { children: ReactNode }) {
       ...prev,
       invoices: prev.invoices.map(i =>
         i.id === invoiceId ? { ...i, status: 'REJECTED' as const, govJustification: reason } : i
+      ),
+      history: addHistory(prev.history, 'GOV', 'Contracting Officer', 'Invoice Rejected', `Rejected invoice ${invoiceId}: ${reason}`, invoiceId),
+    }))
+  }, [])
+
+  const submitContractMod = useCallback((contractId: string, type: 'REA' | 'ECP' | 'GOV_MOD', title: string, description: string, amount: number) => {
+    setState(prev => {
+      const contract = prev.contracts.find(c => c.id === contractId)
+      const modId = `mod-${Date.now()}`
+      const requestedBy = type === 'GOV_MOD' ? 'GOV' : 'VENDOR'
+
+      const newMod: ContractMod = {
+        id: modId,
+        contractId,
+        type,
+        requestedBy,
+        title,
+        description,
+        amount,
+        status: 'SUBMITTED',
+        submittedAt: new Date().toISOString(),
+      }
+
+      let newNotifications = prev.notifications
+      let newHistory = prev.history
+
+      if (requestedBy === 'VENDOR') {
+        newNotifications = addNotification(newNotifications, 'GOV', `Contract mod request from ${contract?.contractor || 'vendor'}: ${title}`, 'action_required', modId)
+        newHistory = addHistory(newHistory, 'VENDOR', contract?.contractor || 'Vendor', 'Mod Requested', `Submitted ${type} for ${contract?.contractNumber || contractId}: "${title}" ($${amount.toLocaleString()})`, modId)
+      } else {
+        newNotifications = addNotification(newNotifications, 'VENDOR', `Government-initiated contract mod: ${title}`, 'info', modId, contract?.contractor)
+        newHistory = addHistory(newHistory, 'GOV', 'Contracting Officer', 'Mod Issued', `Issued ${type} on ${contract?.contractNumber || contractId}: "${title}" ($${amount.toLocaleString()})`, modId)
+      }
+
+      return {
+        ...prev,
+        contractMods: [...prev.contractMods, newMod],
+        notifications: newNotifications,
+        history: newHistory,
+      }
+    })
+  }, [])
+
+  const approveContractMod = useCallback((modId: string) => {
+    setState(prev => {
+      const mod = prev.contractMods.find(m => m.id === modId)
+      if (!mod) return prev
+      const contract = prev.contracts.find(c => c.id === mod.contractId)
+
+      return {
+        ...prev,
+        contractMods: prev.contractMods.map(m =>
+          m.id === modId ? { ...m, status: 'APPROVED' as const, resolvedAt: new Date().toISOString() } : m
+        ),
+        notifications: addNotification(prev.notifications, 'VENDOR', `Contract mod "${mod.title}" approved`, 'success', modId, contract?.contractor),
+        history: addHistory(prev.history, 'GOV', 'Contracting Officer', 'Mod Approved', `Approved mod "${mod.title}" ($${mod.amount.toLocaleString()}) on ${contract?.contractNumber || mod.contractId}`, modId),
+      }
+    })
+  }, [])
+
+  const rejectContractMod = useCallback((modId: string) => {
+    setState(prev => {
+      const mod = prev.contractMods.find(m => m.id === modId)
+      if (!mod) return prev
+      const contract = prev.contracts.find(c => c.id === mod.contractId)
+
+      return {
+        ...prev,
+        contractMods: prev.contractMods.map(m =>
+          m.id === modId ? { ...m, status: 'REJECTED' as const, resolvedAt: new Date().toISOString() } : m
+        ),
+        notifications: addNotification(prev.notifications, 'VENDOR', `Contract mod "${mod.title}" rejected`, 'warning', modId, contract?.contractor),
+        history: addHistory(prev.history, 'GOV', 'Contracting Officer', 'Mod Rejected', `Rejected mod "${mod.title}" on ${contract?.contractNumber || mod.contractId}`, modId),
+      }
+    })
+  }, [])
+
+  const markNotificationRead = useCallback((id: string) => {
+    setState(prev => ({
+      ...prev,
+      notifications: prev.notifications.map(n =>
+        n.id === id ? { ...n, read: true } : n
       ),
     }))
   }, [])
@@ -471,6 +751,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
     submitInvoice,
     approveInvoice,
     rejectInvoice,
+    submitContractMod,
+    approveContractMod,
+    rejectContractMod,
+    markNotificationRead,
   }
 
   return (

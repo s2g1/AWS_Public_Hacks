@@ -1,5 +1,6 @@
+import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { useAppContext } from '../store/AppContext'
+import { useAppContext, Notification } from '../store/AppContext'
 
 // --- Types ---
 
@@ -31,23 +32,26 @@ function formatCurrency(amount: number): string {
 
 function getStatusDotClass(status: AgentHealth['status']): string {
   switch (status) {
-    case 'healthy':
-      return 'bg-green-500'
-    case 'degraded':
-      return 'bg-yellow-500'
-    case 'offline':
-      return 'bg-red-500'
+    case 'healthy': return 'bg-green-500'
+    case 'degraded': return 'bg-yellow-500'
+    case 'offline': return 'bg-red-500'
   }
 }
 
 function getStatusLabel(status: AgentHealth['status']): string {
   switch (status) {
-    case 'healthy':
-      return 'Healthy'
-    case 'degraded':
-      return 'Degraded'
-    case 'offline':
-      return 'Offline'
+    case 'healthy': return 'Healthy'
+    case 'degraded': return 'Degraded'
+    case 'offline': return 'Offline'
+  }
+}
+
+function getNotifIcon(type: Notification['type']): string {
+  switch (type) {
+    case 'info': return 'ℹ️'
+    case 'action_required': return '⚡'
+    case 'success': return '✅'
+    case 'warning': return '⚠️'
   }
 }
 
@@ -69,7 +73,6 @@ function StatCard({ label, value, icon, accent }: { label: string; value: number
 
 function ObligationBar({ label, value, total, color }: { label: string; value: number; total: number; color: string }) {
   const pct = total > 0 ? (value / total) * 100 : 0
-
   return (
     <div>
       <div className="flex items-center justify-between text-sm mb-1">
@@ -77,11 +80,66 @@ function ObligationBar({ label, value, total, color }: { label: string; value: n
         <span className="text-gray-600">{formatCurrency(value)} ({pct.toFixed(1)}%)</span>
       </div>
       <div className="w-full bg-gray-200 rounded-full h-3">
-        <div
-          className={`${color} rounded-full h-3 transition-all`}
-          style={{ width: `${Math.min(pct, 100)}%` }}
-        />
+        <div className={`${color} rounded-full h-3 transition-all`} style={{ width: `${Math.min(pct, 100)}%` }} />
       </div>
+    </div>
+  )
+}
+
+// --- Notifications Section ---
+
+function NotificationsSection({ notifications, onMarkRead }: { notifications: Notification[]; onMarkRead: (id: string) => void }) {
+  const [expanded, setExpanded] = useState(true)
+  const unreadCount = notifications.filter(n => !n.read).length
+
+  if (notifications.length === 0) return null
+
+  return (
+    <div className="bg-white rounded-lg shadow-sm border border-gray-200 mb-6">
+      <button
+        onClick={() => setExpanded(!expanded)}
+        className="w-full flex items-center justify-between px-4 sm:px-5 py-3 hover:bg-gray-50 transition-colors"
+      >
+        <div className="flex items-center gap-2">
+          <span className="text-lg" aria-hidden="true">🔔</span>
+          <span className="text-sm font-semibold text-gray-900">Notifications</span>
+          {unreadCount > 0 && (
+            <span className="inline-flex items-center justify-center px-2 py-0.5 rounded-full text-xs font-bold bg-red-500 text-white min-w-[20px]">
+              {unreadCount}
+            </span>
+          )}
+        </div>
+        <span className="text-gray-400 text-xs">{expanded ? '▼' : '▶'}</span>
+      </button>
+
+      {expanded && (
+        <div className="border-t border-gray-200 divide-y divide-gray-100 max-h-64 overflow-y-auto">
+          {notifications.slice(0, 10).map((notif) => (
+            <div
+              key={notif.id}
+              className={`px-4 sm:px-5 py-3 flex items-start gap-3 ${!notif.read ? 'bg-blue-50/50' : ''}`}
+            >
+              <span className="text-base flex-shrink-0 mt-0.5" aria-hidden="true">{getNotifIcon(notif.type)}</span>
+              <div className="min-w-0 flex-1">
+                <p className={`text-sm ${!notif.read ? 'font-medium text-gray-900' : 'text-gray-700'}`}>
+                  {notif.message}
+                </p>
+                <p className="text-xs text-gray-400 mt-0.5">
+                  {new Date(notif.createdAt).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                </p>
+              </div>
+              {!notif.read && (
+                <button
+                  onClick={(e) => { e.stopPropagation(); onMarkRead(notif.id) }}
+                  className="text-xs text-blue-600 hover:text-blue-800 font-medium flex-shrink-0"
+                >
+                  Mark read
+                </button>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   )
 }
@@ -89,24 +147,34 @@ function ObligationBar({ label, value, total, color }: { label: string; value: n
 // --- Main Component ---
 
 function Dashboard() {
-  const { state } = useAppContext()
+  const { state, markNotificationRead } = useAppContext()
+  const isGov = state.currentRole === 'GOV'
+
+  // Filter notifications by role and vendor company
+  const myNotifications = state.notifications.filter(n => {
+    if (n.targetRole !== state.currentRole) return false
+    if (state.currentRole === 'VENDOR' && n.targetCompany && n.targetCompany !== state.vendorCompany) return false
+    return true
+  })
 
   // Compute real stats from state
-  const totalContracts = state.contracts.length
+  const visibleContracts = isGov
+    ? state.contracts
+    : state.contracts.filter(c => c.contractor === state.vendorCompany)
+  const totalContracts = visibleContracts.length
   const pendingProposals = state.proposals.filter(p => p.status === 'SUBMITTED').length
   const openSolicitations = state.solicitations.filter(s => s.status === 'OPEN').length
   const disbursedPayments = state.payments.filter(p => p.status === 'DISBURSED').length
   const flaggedInvoices = state.invoices.filter(i => i.status === 'FLAGGED').length
 
-  // Obligation totals from contracts
-  const totalCeiling = state.contracts.reduce((sum, c) => sum + c.totalCeiling, 0)
-  const totalObligated = state.contracts.reduce((sum, c) => sum + c.totalObligated, 0)
-  const totalExpended = state.contracts.reduce((sum, c) => sum + c.totalExpended, 0)
+  // Obligation totals from visible contracts
+  const totalCeiling = visibleContracts.reduce((sum, c) => sum + c.totalCeiling, 0)
+  const totalObligated = visibleContracts.reduce((sum, c) => sum + c.totalObligated, 0)
+  const totalExpended = visibleContracts.reduce((sum, c) => sum + c.totalExpended, 0)
 
   // Recent activity derived from state
   const recentActivity: { id: string; description: string; type: 'payment' | 'contract' | 'alert' | 'info'; status: 'success' | 'warning' | 'error' | 'info' }[] = []
 
-  // Add recent payments
   for (const p of state.payments.slice(-3).reverse()) {
     recentActivity.push({
       id: p.id,
@@ -116,7 +184,6 @@ function Dashboard() {
     })
   }
 
-  // Add flagged invoices
   for (const inv of state.invoices.filter(i => i.status === 'FLAGGED').slice(-2)) {
     recentActivity.push({
       id: inv.id,
@@ -126,7 +193,6 @@ function Dashboard() {
     })
   }
 
-  // Add recent proposals
   for (const prop of state.proposals.filter(p => p.status === 'SUBMITTED').slice(-2)) {
     recentActivity.push({
       id: prop.id,
@@ -136,8 +202,7 @@ function Dashboard() {
     })
   }
 
-  // Add recent contract creations
-  for (const c of state.contracts.slice(-2).reverse()) {
+  for (const c of visibleContracts.slice(-2).reverse()) {
     recentActivity.push({
       id: c.id,
       description: `Contract ${c.contractNumber} awarded to ${c.contractor}`,
@@ -173,9 +238,12 @@ function Dashboard() {
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
         <p className="mt-1 text-sm text-gray-600">
-          Federal Payment Processing Overview — {state.currentRole === 'GOV' ? '🏛️ Government View' : '🏢 Vendor View'}
+          Federal Payment Processing Overview — {isGov ? '🏛️ Government View' : '🏢 Vendor View'}
         </p>
       </div>
+
+      {/* Notifications */}
+      <NotificationsSection notifications={myNotifications} onMarkRead={markNotificationRead} />
 
       {/* Summary Statistics Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
@@ -195,10 +263,7 @@ function Dashboard() {
               <p className="text-sm text-gray-500 py-4 text-center">No recent activity. Start by creating a solicitation or submitting a proposal.</p>
             ) : (
               recentActivity.slice(0, 6).map((item) => (
-                <div
-                  key={item.id}
-                  className={`border-l-4 ${getActivityBorderClass(item.status)} bg-gray-50 rounded-r-lg p-3`}
-                >
+                <div key={item.id} className={`border-l-4 ${getActivityBorderClass(item.status)} bg-gray-50 rounded-r-lg p-3`}>
                   <div className="flex items-start gap-2">
                     <span className="text-base flex-shrink-0" aria-hidden="true">{getActivityIcon(item.type)}</span>
                     <p className="text-sm text-gray-800">{item.description}</p>
@@ -235,13 +300,13 @@ function Dashboard() {
                 </div>
               </Link>
               <Link
-                to="/payments"
+                to="/history"
                 className="flex items-center gap-3 w-full p-3 rounded-lg border border-gray-200 hover:bg-purple-50 hover:border-purple-300 transition-colors text-left"
               >
-                <span className="flex items-center justify-center w-9 h-9 rounded-lg bg-purple-100 text-purple-600 text-lg" aria-hidden="true">💰</span>
+                <span className="flex items-center justify-center w-9 h-9 rounded-lg bg-purple-100 text-purple-600 text-lg" aria-hidden="true">📜</span>
                 <div>
-                  <p className="text-sm font-medium text-gray-900">Payments</p>
-                  <p className="text-xs text-gray-500">{disbursedPayments} disbursed</p>
+                  <p className="text-sm font-medium text-gray-900">History</p>
+                  <p className="text-xs text-gray-500">View your action history</p>
                 </div>
               </Link>
             </div>
@@ -290,7 +355,6 @@ function Dashboard() {
             </Link>
           </div>
 
-          {/* Summary cards */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
             <div className="text-center p-4 bg-gray-50 rounded-lg border border-gray-200">
               <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Total Ceiling</p>
@@ -306,14 +370,12 @@ function Dashboard() {
             </div>
           </div>
 
-          {/* Progress bars */}
           <div className="space-y-4">
             <ObligationBar label="Obligated vs Ceiling" value={totalObligated} total={totalCeiling} color="bg-blue-500" />
             <ObligationBar label="Expended vs Obligated" value={totalExpended} total={totalObligated} color="bg-green-500" />
             <ObligationBar label="Expended vs Ceiling" value={totalExpended} total={totalCeiling} color="bg-purple-500" />
           </div>
 
-          {/* Anti-deficiency warning */}
           {totalObligated > totalCeiling && (
             <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg flex items-center gap-2" role="alert">
               <span className="text-red-600 font-bold text-sm">⚠️</span>
@@ -321,7 +383,6 @@ function Dashboard() {
             </div>
           )}
 
-          {/* Remaining capacity */}
           <div className="mt-4 pt-4 border-t border-gray-200 grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
             <div>
               <span className="text-gray-500">Remaining Ceiling Capacity:</span>

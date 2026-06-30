@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useAppContext, Contract, Invoice, CLINItem } from '../store/AppContext'
+import { useAppContext, Contract, Invoice, CLINItem, ContractMod } from '../store/AppContext'
 
 // --- Types ---
 
@@ -24,12 +24,9 @@ function formatCurrency(amount: number): string {
 
 function getRiskBadgeClasses(risk: RiskLevel): string {
   switch (risk) {
-    case 'RED':
-      return 'bg-red-100 text-red-800 border-red-200'
-    case 'YELLOW':
-      return 'bg-yellow-100 text-yellow-800 border-yellow-200'
-    case 'GREEN':
-      return 'bg-green-100 text-green-800 border-green-200'
+    case 'RED': return 'bg-red-100 text-red-800 border-red-200'
+    case 'YELLOW': return 'bg-yellow-100 text-yellow-800 border-yellow-200'
+    case 'GREEN': return 'bg-green-100 text-green-800 border-green-200'
   }
 }
 
@@ -58,45 +55,30 @@ const defaultSBIRPhases: SBIRPhase[] = [
 function SBIRTimeline({ phases }: { phases: SBIRPhase[] }) {
   function getStatusIcon(status: SBIRPhase['status']) {
     switch (status) {
-      case 'COMPLETED':
-        return <span className="text-green-600 font-bold">✓</span>
-      case 'IN_PROGRESS':
-        return <span className="text-blue-600 font-bold">●</span>
-      case 'PENDING':
-        return <span className="text-gray-400 font-bold">○</span>
+      case 'COMPLETED': return <span className="text-green-600 font-bold">✓</span>
+      case 'IN_PROGRESS': return <span className="text-blue-600 font-bold">●</span>
+      case 'PENDING': return <span className="text-gray-400 font-bold">○</span>
     }
   }
-
   function getStatusLabel(status: SBIRPhase['status']) {
     switch (status) {
-      case 'COMPLETED':
-        return 'COMPLETED'
-      case 'IN_PROGRESS':
-        return 'IN PROGRESS'
-      case 'PENDING':
-        return 'PENDING'
+      case 'COMPLETED': return 'COMPLETED'
+      case 'IN_PROGRESS': return 'IN PROGRESS'
+      case 'PENDING': return 'PENDING'
     }
   }
-
   function getConnectorColor(status: SBIRPhase['status']) {
     switch (status) {
-      case 'COMPLETED':
-        return 'bg-green-400'
-      case 'IN_PROGRESS':
-        return 'bg-blue-400'
-      case 'PENDING':
-        return 'bg-gray-200'
+      case 'COMPLETED': return 'bg-green-400'
+      case 'IN_PROGRESS': return 'bg-blue-400'
+      case 'PENDING': return 'bg-gray-200'
     }
   }
-
   function getNodeBg(status: SBIRPhase['status']) {
     switch (status) {
-      case 'COMPLETED':
-        return 'bg-green-100 border-green-400'
-      case 'IN_PROGRESS':
-        return 'bg-blue-100 border-blue-400 ring-2 ring-blue-200'
-      case 'PENDING':
-        return 'bg-gray-100 border-gray-300'
+      case 'COMPLETED': return 'bg-green-100 border-green-400'
+      case 'IN_PROGRESS': return 'bg-blue-100 border-blue-400 ring-2 ring-blue-200'
+      case 'PENDING': return 'bg-gray-100 border-gray-300'
     }
   }
 
@@ -138,18 +120,11 @@ function CLINRow({ clin, isExpanded, onToggle }: { clin: CLINItem; isExpanded: b
         aria-expanded={isExpanded}
       >
         <div className="flex items-center gap-3 min-w-0 flex-1">
-          <span
-            className="text-gray-400 transition-transform duration-200 text-xs"
-            style={{ transform: isExpanded ? 'rotate(90deg)' : 'rotate(0deg)' }}
-          >
-            ▶
-          </span>
+          <span className="text-gray-400 transition-transform duration-200 text-xs" style={{ transform: isExpanded ? 'rotate(90deg)' : 'rotate(0deg)' }}>▶</span>
           <div className="min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
               <span className="font-semibold text-gray-900 text-sm sm:text-base">CLIN {clin.clinNumber}</span>
-              <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium border ${getRiskBadgeClasses(risk)}`}>
-                {risk}
-              </span>
+              <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium border ${getRiskBadgeClasses(risk)}`}>{risk}</span>
               <span className="text-xs text-gray-400 bg-gray-50 px-2 py-0.5 rounded">{clin.type}</span>
             </div>
             <p className="text-xs sm:text-sm text-gray-600 truncate mt-0.5">{clin.description}</p>
@@ -164,34 +139,18 @@ function CLINRow({ clin, isExpanded, onToggle }: { clin: CLINItem; isExpanded: b
       {isExpanded && (
         <div className="border-t border-gray-200 bg-gray-50 p-4 sm:p-5">
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-4">
-            <div>
-              <p className="text-xs font-medium text-gray-500 uppercase">Ceiling</p>
-              <p className="text-sm font-semibold text-gray-900">{formatCurrency(clin.ceiling)}</p>
-            </div>
-            <div>
-              <p className="text-xs font-medium text-gray-500 uppercase">Obligated</p>
-              <p className="text-sm font-semibold text-gray-900">{formatCurrency(clin.obligated)}</p>
-            </div>
-            <div>
-              <p className="text-xs font-medium text-gray-500 uppercase">Expended</p>
-              <p className="text-sm font-semibold text-gray-900">{formatCurrency(clin.expended)}</p>
-            </div>
-            <div>
-              <p className="text-xs font-medium text-gray-500 uppercase">Remaining</p>
-              <p className="text-sm font-semibold text-gray-900">{formatCurrency(clin.ceiling - clin.expended)}</p>
-            </div>
+            <div><p className="text-xs font-medium text-gray-500 uppercase">Ceiling</p><p className="text-sm font-semibold text-gray-900">{formatCurrency(clin.ceiling)}</p></div>
+            <div><p className="text-xs font-medium text-gray-500 uppercase">Obligated</p><p className="text-sm font-semibold text-gray-900">{formatCurrency(clin.obligated)}</p></div>
+            <div><p className="text-xs font-medium text-gray-500 uppercase">Expended</p><p className="text-sm font-semibold text-gray-900">{formatCurrency(clin.expended)}</p></div>
+            <div><p className="text-xs font-medium text-gray-500 uppercase">Remaining</p><p className="text-sm font-semibold text-gray-900">{formatCurrency(clin.ceiling - clin.expended)}</p></div>
           </div>
-
           <div className="mb-4">
             <div className="flex justify-between text-xs text-gray-500 mb-1">
               <span>Expenditure Progress</span>
               <span>{progress.toFixed(1)}% of ceiling</span>
             </div>
             <div className="w-full bg-gray-200 rounded-full h-2">
-              <div
-                className={`${getProgressBarColor(progress)} rounded-full h-2 transition-all`}
-                style={{ width: `${Math.min(progress, 100)}%` }}
-              />
+              <div className={`${getProgressBarColor(progress)} rounded-full h-2 transition-all`} style={{ width: `${Math.min(progress, 100)}%` }} />
             </div>
           </div>
         </div>
@@ -211,14 +170,8 @@ function InvoiceForm({ contract, onSubmit, onClose }: { contract: Contract; onSu
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     const parsedAmount = parseFloat(amount.replace(/,/g, ''))
-    if (!parsedAmount || parsedAmount <= 0) {
-      setError('Please enter a valid amount')
-      return
-    }
-    if (!description.trim()) {
-      setError('Please enter a description')
-      return
-    }
+    if (!parsedAmount || parsedAmount <= 0) { setError('Please enter a valid amount'); return }
+    if (!description.trim()) { setError('Please enter a description'); return }
     onSubmit(clinNumber, parsedAmount, description)
   }
 
@@ -228,56 +181,129 @@ function InvoiceForm({ contract, onSubmit, onClose }: { contract: Contract; onSu
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
           <h2 className="text-lg font-semibold text-gray-900">Submit Invoice</h2>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            </svg>
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
           </button>
         </div>
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">CLIN</label>
-            <select
-              value={clinNumber}
-              onChange={(e) => setClinNumber(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
-            >
+            <select value={clinNumber} onChange={(e) => setClinNumber(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm">
               {contract.clins.map(c => (
-                <option key={c.clinNumber} value={c.clinNumber}>
-                  CLIN {c.clinNumber} - {c.description} (Remaining: {formatCurrency(c.ceiling - c.expended)})
-                </option>
+                <option key={c.clinNumber} value={c.clinNumber}>CLIN {c.clinNumber} - {c.description} (Remaining: {formatCurrency(c.ceiling - c.expended)})</option>
               ))}
             </select>
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Amount ($)</label>
-            <input
-              type="text"
-              value={amount}
-              onChange={(e) => setAmount(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
-              placeholder="e.g., 50000"
-            />
+            <input type="text" value={amount} onChange={(e) => setAmount(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm" placeholder="e.g., 50000" />
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
-            <textarea
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              rows={3}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
-              placeholder="Describe the work performed..."
-            />
+            <textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={3} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm" placeholder="Describe the work performed..." />
           </div>
           {error && <p className="text-xs text-red-600">{error}</p>}
           <div className="flex justify-end gap-3 pt-2">
-            <button type="button" onClick={onClose} className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50">
-              Cancel
-            </button>
-            <button type="submit" className="px-4 py-2 text-sm font-medium text-white bg-green-600 rounded-lg hover:bg-green-700">
-              Submit Invoice
-            </button>
+            <button type="button" onClick={onClose} className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50">Cancel</button>
+            <button type="submit" className="px-4 py-2 text-sm font-medium text-white bg-green-600 rounded-lg hover:bg-green-700">Submit Invoice</button>
           </div>
         </form>
+      </div>
+    </div>
+  )
+}
+
+// --- Contract Mod Form ---
+
+function ContractModForm({ isGov, onSubmit, onClose }: { contract: Contract; isGov: boolean; onSubmit: (type: 'REA' | 'ECP' | 'GOV_MOD', title: string, description: string, amount: number) => void; onClose: () => void }) {
+  const [modType, setModType] = useState<'REA' | 'ECP' | 'GOV_MOD'>(isGov ? 'GOV_MOD' : 'REA')
+  const [title, setTitle] = useState('')
+  const [description, setDescription] = useState('')
+  const [amount, setAmount] = useState('')
+  const [error, setError] = useState('')
+
+  function handleSubmit(e: React.FormEvent) {
+    e.preventDefault()
+    if (!title.trim()) { setError('Title is required'); return }
+    if (!description.trim()) { setError('Description is required'); return }
+    const parsedAmount = parseFloat(amount.replace(/,/g, ''))
+    if (!parsedAmount || parsedAmount <= 0) { setError('Please enter a valid amount'); return }
+    onSubmit(modType, title, description, parsedAmount)
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+      <div className="bg-white rounded-xl shadow-xl w-full max-w-md">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
+          <h2 className="text-lg font-semibold text-gray-900">{isGov ? 'Issue Contract Mod' : 'Request Contract Mod'}</h2>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+          </button>
+        </div>
+        <form onSubmit={handleSubmit} className="p-6 space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Type</label>
+            <select value={modType} onChange={(e) => setModType(e.target.value as 'REA' | 'ECP' | 'GOV_MOD')} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm">
+              {isGov ? (
+                <option value="GOV_MOD">Government Modification</option>
+              ) : (
+                <>
+                  <option value="REA">REA (Request for Equitable Adjustment)</option>
+                  <option value="ECP">ECP (Engineering Change Proposal)</option>
+                </>
+              )}
+            </select>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Title</label>
+            <input type="text" value={title} onChange={(e) => setTitle(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm" placeholder="Mod title..." />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+            <textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={3} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm" placeholder="Describe the modification..." />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Amount ($)</label>
+            <input type="text" value={amount} onChange={(e) => setAmount(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm" placeholder="e.g., 50000" />
+          </div>
+          {error && <p className="text-xs text-red-600">{error}</p>}
+          <div className="flex justify-end gap-3 pt-2">
+            <button type="button" onClick={onClose} className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50">Cancel</button>
+            <button type="submit" className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700">Submit</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  )
+}
+
+// --- Pending Mods Panel ---
+
+function PendingModsPanel({ mods, isGov, onApprove, onReject }: { mods: ContractMod[]; contractNumber: string; isGov: boolean; onApprove: (id: string) => void; onReject: (id: string) => void }) {
+  const pending = mods.filter(m => m.status === 'SUBMITTED' || m.status === 'UNDER_REVIEW')
+  if (pending.length === 0) return null
+
+  return (
+    <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
+      <h4 className="text-sm font-semibold text-blue-900 mb-2">📋 Pending Modifications ({pending.length})</h4>
+      <div className="space-y-2">
+        {pending.map(mod => (
+          <div key={mod.id} className="bg-white border border-blue-200 rounded-lg p-3">
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-sm font-medium text-gray-900">{mod.title}</span>
+              <span className="text-xs px-2 py-0.5 rounded-full bg-blue-100 text-blue-800 font-medium">{mod.type}</span>
+            </div>
+            <p className="text-xs text-gray-600 mb-1">{mod.description}</p>
+            <div className="flex items-center justify-between">
+              <span className="text-xs text-gray-500">Amount: {formatCurrency(mod.amount)} • {new Date(mod.submittedAt).toLocaleDateString()}</span>
+              {isGov && mod.requestedBy === 'VENDOR' && (
+                <div className="flex gap-2">
+                  <button onClick={() => onApprove(mod.id)} className="px-2 py-1 text-xs font-medium text-white bg-green-600 rounded hover:bg-green-700">Approve</button>
+                  <button onClick={() => onReject(mod.id)} className="px-2 py-1 text-xs font-medium text-red-700 bg-red-50 border border-red-200 rounded hover:bg-red-100">Reject</button>
+                </div>
+              )}
+            </div>
+          </div>
+        ))}
       </div>
     </div>
   )
@@ -287,16 +313,12 @@ function InvoiceForm({ contract, onSubmit, onClose }: { contract: Contract; onSu
 
 function FlaggedInvoicesPanel({ invoices, onApprove, onReject }: { invoices: Invoice[]; onApprove: (id: string, justification: string) => void; onReject: (id: string, reason: string) => void }) {
   const [justification, setJustification] = useState<Record<string, string>>({})
-
   const flagged = invoices.filter(i => i.status === 'FLAGGED')
-
   if (flagged.length === 0) return null
 
   return (
     <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 sm:p-5 mb-6">
-      <h3 className="text-sm font-semibold text-amber-900 uppercase tracking-wide mb-3">
-        ⚠️ Flagged Invoices Requiring Review ({flagged.length})
-      </h3>
+      <h3 className="text-sm font-semibold text-amber-900 uppercase tracking-wide mb-3">⚠️ Flagged Invoices Requiring Review ({flagged.length})</h3>
       <div className="space-y-3">
         {flagged.map(invoice => (
           <div key={invoice.id} className="bg-white border border-amber-200 rounded-lg p-4">
@@ -309,33 +331,15 @@ function FlaggedInvoicesPanel({ invoices, onApprove, onReject }: { invoices: Inv
             {invoice.complianceIssues && (
               <div className="mb-3">
                 {invoice.complianceIssues.map((issue, idx) => (
-                  <p key={idx} className="text-xs text-red-700 bg-red-50 border border-red-100 rounded px-2 py-1 mb-1">
-                    ⚠️ {issue}
-                  </p>
+                  <p key={idx} className="text-xs text-red-700 bg-red-50 border border-red-100 rounded px-2 py-1 mb-1">⚠️ {issue}</p>
                 ))}
               </div>
             )}
             <div className="space-y-2">
-              <textarea
-                value={justification[invoice.id] || ''}
-                onChange={(e) => setJustification(prev => ({ ...prev, [invoice.id]: e.target.value }))}
-                placeholder="Enter justification or rejection reason..."
-                rows={2}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-xs"
-              />
+              <textarea value={justification[invoice.id] || ''} onChange={(e) => setJustification(prev => ({ ...prev, [invoice.id]: e.target.value }))} placeholder="Enter justification or rejection reason..." rows={2} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-xs" />
               <div className="flex gap-2">
-                <button
-                  onClick={() => onApprove(invoice.id, justification[invoice.id] || '')}
-                  className="px-3 py-1.5 text-xs font-medium text-white bg-green-600 rounded-lg hover:bg-green-700"
-                >
-                  Approve & Disburse
-                </button>
-                <button
-                  onClick={() => onReject(invoice.id, justification[invoice.id] || 'Rejected by reviewer')}
-                  className="px-3 py-1.5 text-xs font-medium text-red-700 bg-red-50 border border-red-200 rounded-lg hover:bg-red-100"
-                >
-                  Reject
-                </button>
+                <button onClick={() => onApprove(invoice.id, justification[invoice.id] || '')} className="px-3 py-1.5 text-xs font-medium text-white bg-green-600 rounded-lg hover:bg-green-700">Approve & Disburse</button>
+                <button onClick={() => onReject(invoice.id, justification[invoice.id] || 'Rejected by reviewer')} className="px-3 py-1.5 text-xs font-medium text-red-700 bg-red-50 border border-red-200 rounded-lg hover:bg-red-100">Reject</button>
               </div>
             </div>
           </div>
@@ -347,11 +351,18 @@ function FlaggedInvoicesPanel({ invoices, onApprove, onReject }: { invoices: Inv
 
 // --- Contract Card ---
 
-function ContractCard({ contract, onViewClins, onSubmitInvoice, isGov }: { contract: Contract; onViewClins: () => void; onSubmitInvoice: () => void; isGov: boolean }) {
+function ContractCard({ contract, onViewClins, onSubmitInvoice, onRequestMod, isGov, mods, onApproveMod, onRejectMod }: {
+  contract: Contract
+  onViewClins: () => void
+  onSubmitInvoice: () => void
+  onRequestMod: () => void
+  isGov: boolean
+  mods: ContractMod[]
+  onApproveMod: (id: string) => void
+  onRejectMod: (id: string) => void
+}) {
   const expendedPct = ((contract.totalExpended / contract.totalCeiling) * 100).toFixed(1)
   const obligatedPct = ((contract.totalObligated / contract.totalCeiling) * 100).toFixed(1)
-
-  // Calculate POP progress
   const popStart = new Date(contract.popStart).getTime()
   const popEnd = new Date(contract.popEnd).getTime()
   const now = Date.now()
@@ -364,15 +375,16 @@ function ContractCard({ contract, onViewClins, onSubmitInvoice, isGov }: { contr
           <span className="text-white font-mono text-sm sm:text-base font-bold">{contract.contractNumber}</span>
           <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold border ${
             contract.status === 'ACTIVE' ? 'bg-green-100 text-green-800 border-green-200' : 'bg-gray-100 text-gray-800 border-gray-200'
-          }`}>
-            {contract.status}
-          </span>
+          }`}>{contract.status}</span>
         </div>
         <span className="text-emerald-400 text-xs sm:text-sm font-medium">{contract.contractor}</span>
       </div>
 
       <div className="p-4 sm:p-6">
         <h2 className="text-lg sm:text-xl font-bold text-gray-900 mb-1">{contract.title}</h2>
+
+        {/* Pending Mods */}
+        <PendingModsPanel mods={mods} contractNumber={contract.contractNumber} isGov={isGov} onApprove={onApproveMod} onReject={onRejectMod} />
 
         {/* Period of Performance */}
         <div className="mt-4 p-3 bg-slate-50 rounded-lg border border-slate-200">
@@ -416,21 +428,18 @@ function ContractCard({ contract, onViewClins, onSubmitInvoice, isGov }: { contr
 
         {/* Actions */}
         <div className="mt-6 flex gap-3 flex-wrap">
-          <button
-            onClick={onViewClins}
-            className="inline-flex items-center gap-2 px-5 py-2.5 bg-slate-800 text-white text-sm font-medium rounded-lg hover:bg-slate-700 transition-colors"
-          >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-            </svg>
+          <button onClick={onViewClins} className="inline-flex items-center gap-2 px-5 py-2.5 bg-slate-800 text-white text-sm font-medium rounded-lg hover:bg-slate-700 transition-colors">
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
             View CLINs
           </button>
           {!isGov && contract.status === 'ACTIVE' && (
-            <button
-              onClick={onSubmitInvoice}
-              className="inline-flex items-center gap-2 px-5 py-2.5 bg-green-600 text-white text-sm font-medium rounded-lg hover:bg-green-700 transition-colors"
-            >
+            <button onClick={onSubmitInvoice} className="inline-flex items-center gap-2 px-5 py-2.5 bg-green-600 text-white text-sm font-medium rounded-lg hover:bg-green-700 transition-colors">
               Submit Invoice
+            </button>
+          )}
+          {contract.status === 'ACTIVE' && (
+            <button onClick={onRequestMod} className="inline-flex items-center gap-2 px-5 py-2.5 bg-purple-600 text-white text-sm font-medium rounded-lg hover:bg-purple-700 transition-colors">
+              {isGov ? 'Issue Mod' : 'Request Mod'}
             </button>
           )}
         </div>
@@ -442,24 +451,26 @@ function ContractCard({ contract, onViewClins, onSubmitInvoice, isGov }: { contr
 // --- Main Component ---
 
 function Contracts() {
-  const { state, submitInvoice, approveInvoice, rejectInvoice } = useAppContext()
+  const { state, submitInvoice, approveInvoice, rejectInvoice, submitContractMod, approveContractMod, rejectContractMod } = useAppContext()
   const isGov = state.currentRole === 'GOV'
-  const contracts = state.contracts
+
+  // Vendor scoping: vendor sees only their contracts
+  const contracts = isGov
+    ? state.contracts
+    : state.contracts.filter(c => c.contractor === state.vendorCompany)
+
   const invoices = state.invoices
 
   const [expandedContract, setExpandedContract] = useState<string | null>(null)
   const [expandedClins, setExpandedClins] = useState<Set<string>>(new Set())
   const [invoiceContract, setInvoiceContract] = useState<Contract | null>(null)
+  const [modContract, setModContract] = useState<Contract | null>(null)
   const [toast, setToast] = useState<string | null>(null)
 
   function toggleClin(clinNumber: string) {
     setExpandedClins((prev) => {
       const next = new Set(prev)
-      if (next.has(clinNumber)) {
-        next.delete(clinNumber)
-      } else {
-        next.add(clinNumber)
-      }
+      if (next.has(clinNumber)) { next.delete(clinNumber) } else { next.add(clinNumber) }
       return next
     })
   }
@@ -487,6 +498,14 @@ function Contracts() {
     showToast('Invoice rejected.')
   }
 
+  function handleSubmitMod(type: 'REA' | 'ECP' | 'GOV_MOD', title: string, description: string, amount: number) {
+    if (modContract) {
+      submitContractMod(modContract.id, type, title, description, amount)
+      setModContract(null)
+      showToast('Contract modification submitted.')
+    }
+  }
+
   return (
     <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto">
       {/* Page Header */}
@@ -501,11 +520,7 @@ function Contracts() {
 
       {/* GOV: Flagged invoices for review */}
       {isGov && (
-        <FlaggedInvoicesPanel
-          invoices={invoices}
-          onApprove={handleApproveInvoice}
-          onReject={handleRejectInvoice}
-        />
+        <FlaggedInvoicesPanel invoices={invoices} onApprove={handleApproveInvoice} onReject={handleRejectInvoice} />
       )}
 
       {/* Empty State */}
@@ -516,10 +531,9 @@ function Contracts() {
           </svg>
           <p className="mt-4 text-lg font-medium text-gray-700">No Contracts Yet</p>
           <p className="mt-2 text-sm text-gray-500 max-w-md mx-auto">
-            Contracts are created when a proposal is approved on a solicitation.
             {isGov
-              ? ' Go to Solicitations to review proposals and award contracts.'
-              : ' Submit proposals on open solicitations to receive contract awards.'}
+              ? 'Contracts are created when a proposal is approved. Go to Solicitations to review proposals and award contracts.'
+              : 'Submit proposals on open solicitations to receive contract awards.'}
           </p>
         </div>
       ) : (
@@ -530,8 +544,12 @@ function Contracts() {
               <ContractCard
                 contract={contract}
                 isGov={isGov}
+                mods={state.contractMods.filter(m => m.contractId === contract.id)}
                 onViewClins={() => setExpandedContract(expandedContract === contract.id ? null : contract.id)}
                 onSubmitInvoice={() => setInvoiceContract(contract)}
+                onRequestMod={() => setModContract(contract)}
+                onApproveMod={approveContractMod}
+                onRejectMod={rejectContractMod}
               />
 
               {/* CLIN details */}
@@ -539,27 +557,17 @@ function Contracts() {
                 <div className="mb-6 animate-in fade-in">
                   <div className="flex items-center justify-between mb-3">
                     <h2 className="text-lg font-semibold text-gray-900">CLIN Details</h2>
-                    <button
-                      onClick={() => setExpandedContract(null)}
-                      className="text-xs text-gray-500 hover:text-gray-700 font-medium px-2 py-1 rounded hover:bg-gray-100"
-                    >
-                      Hide CLINs
-                    </button>
+                    <button onClick={() => setExpandedContract(null)} className="text-xs text-gray-500 hover:text-gray-700 font-medium px-2 py-1 rounded hover:bg-gray-100">Hide CLINs</button>
                   </div>
                   {contract.clins.map((clin) => (
-                    <CLINRow
-                      key={clin.clinNumber}
-                      clin={clin}
-                      isExpanded={expandedClins.has(clin.clinNumber)}
-                      onToggle={() => toggleClin(clin.clinNumber)}
-                    />
+                    <CLINRow key={clin.clinNumber} clin={clin} isExpanded={expandedClins.has(clin.clinNumber)} onToggle={() => toggleClin(clin.clinNumber)} />
                   ))}
                 </div>
               )}
             </div>
           ))}
 
-          {/* SBIR Timeline (show for seed contract) */}
+          {/* SBIR Timeline */}
           {contracts.some(c => c.contractNumber === 'FA8750-25-F-0018') && (
             <div className="mb-6">
               <SBIRTimeline phases={defaultSBIRPhases} />
@@ -594,9 +602,7 @@ function Contracts() {
                             inv.status === 'FLAGGED' ? 'bg-amber-100 text-amber-800' :
                             inv.status === 'REJECTED' ? 'bg-red-100 text-red-800' :
                             'bg-blue-100 text-blue-800'
-                          }`}>
-                            {inv.status}
-                          </span>
+                          }`}>{inv.status}</span>
                         </td>
                         <td className="py-2 pr-4 text-xs text-gray-500">{new Date(inv.submittedAt).toLocaleDateString()}</td>
                         <td className="py-2 text-xs text-gray-600 max-w-[200px] truncate">{inv.description}</td>
@@ -612,11 +618,12 @@ function Contracts() {
 
       {/* Invoice Form Modal */}
       {invoiceContract && (
-        <InvoiceForm
-          contract={invoiceContract}
-          onSubmit={handleSubmitInvoice}
-          onClose={() => setInvoiceContract(null)}
-        />
+        <InvoiceForm contract={invoiceContract} onSubmit={handleSubmitInvoice} onClose={() => setInvoiceContract(null)} />
+      )}
+
+      {/* Contract Mod Form Modal */}
+      {modContract && (
+        <ContractModForm contract={modContract} isGov={isGov} onSubmit={handleSubmitMod} onClose={() => setModContract(null)} />
       )}
 
       {/* Toast */}

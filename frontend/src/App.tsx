@@ -3,12 +3,9 @@ import { AppProvider } from './store/AppContext'
 import MainLayout from './components/layout/MainLayout'
 import RoleSwitcher from './components/RoleSwitcher'
 import Dashboard from './pages/Dashboard'
-import Payments from './pages/Payments'
-import Upload from './pages/Upload'
 import Contracts from './pages/Contracts'
 import Solicitations from './pages/Solicitations'
-import Alerts from './pages/Alerts'
-import Correspondence from './pages/Correspondence'
+import History from './pages/History'
 import ChatWidget from './components/ChatWidget'
 
 function App() {
@@ -18,12 +15,9 @@ function App() {
       <MainLayout>
         <Routes>
           <Route path="/" element={<Dashboard />} />
-          <Route path="/payments" element={<Payments />} />
-          <Route path="/upload" element={<Upload />} />
           <Route path="/contracts" element={<Contracts />} />
           <Route path="/solicitations" element={<Solicitations />} />
-          <Route path="/alerts" element={<Alerts />} />
-          <Route path="/correspondence" element={<Correspondence />} />
+          <Route path="/history" element={<History />} />
         </Routes>
       </MainLayout>
       <ChatWidget />

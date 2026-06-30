@@ -748,11 +748,13 @@ function Solicitations() {
   const [showReviewPanel, setShowReviewPanel] = useState(false)
   const [toast, setToast] = useState<string | null>(null)
 
-  // VENDOR only sees OPEN + AWARDED, GOV sees all
+  // VENDOR sees OPEN (all) + AWARDED only if awarded to their company; GOV sees all
   const visibleSolicitations = useMemo(() => {
     if (isGov) return state.solicitations
-    return state.solicitations.filter(s => s.status === 'OPEN' || s.status === 'AWARDED')
-  }, [state.solicitations, isGov])
+    return state.solicitations.filter(s =>
+      s.status === 'OPEN' || (s.status === 'AWARDED' && s.awardedTo === state.vendorCompany)
+    )
+  }, [state.solicitations, isGov, state.vendorCompany])
 
   // Filter solicitations
   const filteredSolicitations = useMemo(() => {
