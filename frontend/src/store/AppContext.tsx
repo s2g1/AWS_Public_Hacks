@@ -164,7 +164,7 @@ const STORAGE_KEY = 'fedpay_app_state'
 function createSeedData(): AppState {
   return {
     currentRole: 'GOV',
-    vendorCompany: 'Quantum Federal Systems LLC',
+    vendorCompany: 'Nexus AI Solutions LLC',
     solicitations: [
       {
         id: 'sol-1',
@@ -400,7 +400,7 @@ function loadState(): AppState {
       if (!parsed.notifications) parsed.notifications = []
       if (!parsed.history) parsed.history = []
       if (!parsed.contractMods) parsed.contractMods = []
-      if (!parsed.vendorCompany) parsed.vendorCompany = 'Quantum Federal Systems LLC'
+      if (!parsed.vendorCompany) parsed.vendorCompany = 'Nexus AI Solutions LLC'
       return parsed
     }
   } catch {
