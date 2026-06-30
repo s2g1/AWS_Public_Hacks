@@ -190,10 +190,18 @@ export async function sendMessage(message: string, currentPage: string): Promise
       '• Understanding payment pipeline stages and statuses\n' +
       '• Contract management, CLINs, and risk levels\n' +
       '• REA workflows and submissions\n' +
-      '• Roles, permissions, and routing thresholds\n\n' +
+      '• Roles, permissions, and routing thresholds\n' +
+      '• Type **"reset"** to clear app data and reload\n\n' +
       (context ? context + '\n\n' : '') +
       'What would you like to know?'
     )
+  }
+
+  // Reset / clear localStorage command
+  if (/^(reset|clear|clear data|reset data|clear storage|clear localstorage|fresh start)$/i.test(trimmed)) {
+    localStorage.removeItem('fedpay_app_state')
+    setTimeout(() => window.location.reload(), 500)
+    return '🔄 Clearing app data and reloading with fresh seed data...'
   }
 
   // Match against knowledge patterns
