@@ -192,7 +192,7 @@ export class InfraStack extends cdk.Stack {
       timeout: cdk.Duration.seconds(60),
       memorySize: 256,
       environment: {
-        BEDROCK_MODEL_ID: 'global.anthropic.claude-sonnet-4-6',
+        BEDROCK_MODEL_ID: 'us.amazon.nova-pro-v1:0',
       },
     });
 
@@ -200,6 +200,13 @@ export class InfraStack extends cdk.Stack {
     evaluateProposalFn.addToRolePolicy(new iam.PolicyStatement({
       effect: iam.Effect.ALLOW,
       actions: ['bedrock:InvokeModel', 'bedrock:InvokeModelWithResponseStream'],
+      resources: ['*'],
+    }));
+
+    // Grant Marketplace permissions (needed for some model access)
+    evaluateProposalFn.addToRolePolicy(new iam.PolicyStatement({
+      effect: iam.Effect.ALLOW,
+      actions: ['aws-marketplace:ViewSubscriptions', 'aws-marketplace:Subscribe'],
       resources: ['*'],
     }));
 

@@ -42,29 +42,35 @@ type EvaluationResponse struct {
 	Recommendation string     `json:"recommendation"`
 }
 
-// --- Anthropic Claude API format (used by Claude Sonnet 4.6) ---
+// --- Amazon Nova Converse-style API format ---
 
-type ClaudeRequest struct {
-	AnthropicVersion string         `json:"anthropic_version"`
-	MaxTokens        int            `json:"max_tokens"`
-	Messages         []ClaudeMessage `json:"messages"`
+type NovaRequest struct {
+	Messages        []NovaMessage   `json:"messages"`
+	InferenceConfig NovaInference   `json:"inferenceConfig"`
 }
 
-type ClaudeMessage struct {
-	Role    string               `json:"role"`
-	Content []ClaudeContentBlock `json:"content"`
+type NovaMessage struct {
+	Role    string             `json:"role"`
+	Content []NovaContentBlock `json:"content"`
 }
 
-type ClaudeContentBlock struct {
-	Type string `json:"type"`
-	Text string `json:"text,omitempty"`
+type NovaContentBlock struct {
+	Text string `json:"text"`
 }
 
-type ClaudeResponse struct {
-	Content []struct {
-		Type string `json:"type"`
-		Text string `json:"text"`
-	} `json:"content"`
+type NovaInference struct {
+	MaxTokens   int     `json:"maxTokens"`
+	Temperature float64 `json:"temperature"`
+}
+
+type NovaResponse struct {
+	Output struct {
+		Message struct {
+			Content []struct {
+				Text string `json:"text"`
+			} `json:"content"`
+		} `json:"message"`
+	} `json:"output"`
 }
 
 func handler(ctx context.Context, request events.LambdaFunctionURLRequest) (events.LambdaFunctionURLResponse, error) {
@@ -76,16 +82,13 @@ func handler(ctx context.Context, request events.LambdaFunctionURLRequest) (even
 		return events.LambdaFunctionURLResponse{StatusCode: 200, Headers: headers}, nil
 	}
 
-	// Parse request body
 	var req EvaluationRequest
 	if err := json.Unmarshal([]byte(request.Body), &req); err != nil {
 		return errorResponse(400, "Invalid request body: "+err.Error(), headers), nil
 	}
 
-	// Build the prompt
 	prompt := buildEvaluationPrompt(req)
 
-	// Invoke Bedrock with Claude Sonnet 4.6 (global cross-region inference)
 	cfg, err := config.LoadDefaultConfig(ctx)
 	if err != nil {
 		return errorResponse(500, "Failed to load AWS config: "+err.Error(), headers), nil
@@ -94,23 +97,25 @@ func handler(ctx context.Context, request events.LambdaFunctionURLRequest) (even
 	client := bedrockruntime.NewFromConfig(cfg)
 	modelID := os.Getenv("BEDROCK_MODEL_ID")
 	if modelID == "" {
-		modelID = "global.anthropic.claude-sonnet-4-6"
+		modelID = "us.amazon.nova-pro-v1:0"
 	}
 
-	claudeReq := ClaudeRequest{
-		AnthropicVersion: "bedrock-2023-05-31",
-		MaxTokens:        4096,
-		Messages: []ClaudeMessage{
+	novaReq := NovaRequest{
+		Messages: []NovaMessage{
 			{
 				Role: "user",
-				Content: []ClaudeContentBlock{
-					{Type: "text", Text: prompt},
+				Content: []NovaContentBlock{
+					{Text: prompt},
 				},
 			},
 		},
+		InferenceConfig: NovaInference{
+			MaxTokens:   4096,
+			Temperature: 0.3,
+		},
 	}
 
-	reqBytes, err := json.Marshal(claudeReq)
+	reqBytes, err := json.Marshal(novaReq)
 	if err != nil {
 		return errorResponse(500, "Failed to marshal request: "+err.Error(), headers), nil
 	}
@@ -124,19 +129,17 @@ func handler(ctx context.Context, request events.LambdaFunctionURLRequest) (even
 		return errorResponse(500, "Bedrock invocation failed: "+err.Error(), headers), nil
 	}
 
-	// Parse Claude response
-	var claudeResp ClaudeResponse
-	if err := json.Unmarshal(result.Body, &claudeResp); err != nil {
+	var novaResp NovaResponse
+	if err := json.Unmarshal(result.Body, &novaResp); err != nil {
 		return errorResponse(500, "Failed to parse Bedrock response: "+err.Error(), headers), nil
 	}
 
-	if len(claudeResp.Content) == 0 {
+	if len(novaResp.Output.Message.Content) == 0 {
 		return errorResponse(500, "Empty response from Bedrock", headers), nil
 	}
 
-	responseText := claudeResp.Content[0].Text
+	responseText := novaResp.Output.Message.Content[0].Text
 
-	// Parse the evaluation JSON
 	evaluation, err := parseEvaluation(responseText, req.PriceProposal)
 	if err != nil {
 		return errorResponse(500, "Failed to parse evaluation: "+err.Error(), headers), nil
@@ -201,7 +204,7 @@ func parseEvaluation(response string, priceProposal float64) (*EvaluationRespons
 	response = strings.TrimSuffix(response, "```")
 	response = strings.TrimSpace(response)
 
-	// Extract JSON
+	// Extract JSON object
 	if idx := strings.Index(response, "{"); idx >= 0 {
 		endIdx := strings.LastIndex(response, "}")
 		if endIdx > idx {
@@ -214,7 +217,6 @@ func parseEvaluation(response string, priceProposal float64) (*EvaluationRespons
 		return nil, fmt.Errorf("failed to parse evaluation JSON: %w (raw: %s)", err, response[:min(200, len(response))])
 	}
 
-	// Ensure CLINs have obligated/expended set to 0
 	for i := range eval.CLINBreakdown {
 		eval.CLINBreakdown[i].Obligated = 0
 		eval.CLINBreakdown[i].Expended = 0
