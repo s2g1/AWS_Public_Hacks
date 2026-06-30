@@ -445,6 +445,146 @@ function FlaggedInvoicesPanel({ invoices, onApprove, onReject }: { invoices: Inv
   )
 }
 
+// --- Payment Pipeline (per contract) ---
+
+const PIPELINE_STEPS = [
+  { key: 'SUBMITTED', label: 'Invoice Submitted', icon: '📄' },
+  { key: 'COMPLIANCE_CHECK', label: 'Compliance Check', icon: '🔍' },
+  { key: 'FLAGGED', label: 'Gov Review', icon: '⚠️' },
+  { key: 'APPROVED', label: 'Approved', icon: '✅' },
+  { key: 'DISBURSED', label: 'Disbursed', icon: '💰' },
+]
+
+function getStepIndex(status: string): number {
+  switch (status) {
+    case 'SUBMITTED': return 0
+    case 'COMPLIANCE_CHECK': return 1
+    case 'FLAGGED': return 2
+    case 'APPROVED': return 3
+    case 'DISBURSED': return 4
+    case 'REJECTED': return -1
+    default: return 0
+  }
+}
+
+function PaymentPipeline({ contractId, contractNumber }: { contractId: string; contractNumber: string }) {
+  const { state } = useAppContext()
+  const contractInvoices = state.invoices.filter(i => i.contractId === contractId)
+  const contractPayments = state.payments.filter(p => p.contractId === contractId)
+
+  if (contractInvoices.length === 0) return null
+
+  return (
+    <div className="mt-6 border-t border-gray-200 pt-5">
+      <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wide mb-4">
+        Payment Pipeline — {contractNumber}
+      </h3>
+
+      <div className="space-y-4">
+        {contractInvoices.map(invoice => {
+          const stepIdx = getStepIndex(invoice.status)
+          const isRejected = invoice.status === 'REJECTED'
+          const payment = contractPayments.find(p => p.invoiceId === invoice.id)
+
+          return (
+            <div key={invoice.id} className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+              {/* Invoice header */}
+              <div className="flex items-center justify-between mb-3">
+                <div>
+                  <span className="text-sm font-semibold text-gray-900">
+                    CLIN {invoice.clinNumber} — {formatCurrency(invoice.amount)}
+                  </span>
+                  <span className="ml-2 text-xs text-gray-500">
+                    {new Date(invoice.submittedAt).toLocaleDateString()}
+                  </span>
+                </div>
+                <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${
+                  invoice.status === 'DISBURSED' ? 'bg-green-100 text-green-800' :
+                  invoice.status === 'FLAGGED' ? 'bg-amber-100 text-amber-800' :
+                  invoice.status === 'REJECTED' ? 'bg-red-100 text-red-800' :
+                  'bg-blue-100 text-blue-800'
+                }`}>
+                  {invoice.status}
+                </span>
+              </div>
+
+              {/* Pipeline steps visualization */}
+              <div className="flex items-center gap-0">
+                {PIPELINE_STEPS.map((step, idx) => {
+                  const isCompleted = !isRejected && stepIdx >= idx
+                  const isCurrent = !isRejected && stepIdx === idx
+                  const isSkipped = invoice.status === 'DISBURSED' && step.key === 'FLAGGED' // Skipped if compliance passed
+
+                  return (
+                    <div key={step.key} className="flex items-center flex-1">
+                      <div className="flex flex-col items-center flex-1">
+                        <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm border-2 transition-all ${
+                          isRejected && step.key === 'FLAGGED'
+                            ? 'border-red-400 bg-red-100'
+                            : isCompleted
+                              ? 'border-green-500 bg-green-100'
+                              : isCurrent
+                                ? 'border-blue-500 bg-blue-100 ring-2 ring-blue-200'
+                                : isSkipped
+                                  ? 'border-gray-200 bg-gray-50'
+                                  : 'border-gray-300 bg-white'
+                        }`}>
+                          {isRejected && step.key === 'FLAGGED' ? '❌' :
+                           isCompleted ? '✓' :
+                           isSkipped ? '—' :
+                           step.icon}
+                        </div>
+                        <span className={`text-[10px] mt-1 text-center leading-tight ${
+                          isCompleted ? 'text-green-700 font-medium' :
+                          isCurrent ? 'text-blue-700 font-medium' :
+                          'text-gray-400'
+                        }`}>
+                          {step.label}
+                        </span>
+                      </div>
+                      {idx < PIPELINE_STEPS.length - 1 && (
+                        <div className={`h-0.5 w-full min-w-[12px] mx-1 ${
+                          !isRejected && stepIdx > idx ? 'bg-green-400' : 'bg-gray-200'
+                        }`} />
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
+
+              {/* Compliance issues if flagged */}
+              {invoice.complianceIssues && invoice.complianceIssues.length > 0 && (
+                <div className="mt-3 bg-amber-50 border border-amber-200 rounded p-2">
+                  <p className="text-xs font-medium text-amber-800 mb-1">Compliance Issues:</p>
+                  {invoice.complianceIssues.map((issue, i) => (
+                    <p key={i} className="text-xs text-amber-700">• {issue}</p>
+                  ))}
+                </div>
+              )}
+
+              {/* Rejection reason */}
+              {isRejected && invoice.govJustification && (
+                <div className="mt-3 bg-red-50 border border-red-200 rounded p-2">
+                  <p className="text-xs font-medium text-red-800">Rejection Reason: {invoice.govJustification}</p>
+                </div>
+              )}
+
+              {/* Disbursement confirmation */}
+              {invoice.status === 'DISBURSED' && payment && (
+                <div className="mt-3 bg-green-50 border border-green-200 rounded p-2">
+                  <p className="text-xs text-green-800">
+                    ✓ Payment of {formatCurrency(payment.amount)} disbursed on {new Date(payment.disbursedAt || '').toLocaleDateString()}
+                  </p>
+                </div>
+              )}
+            </div>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
 // --- Contract Card ---
 
 function ContractCard({ contract, onViewClins, onSubmitInvoice, onRequestMod, isGov, mods, onApproveMod, onRejectMod, isExpanded, onToggleExpand }: {
@@ -553,6 +693,9 @@ function ContractCard({ contract, onViewClins, onSubmitInvoice, onRequestMod, is
               </button>
             )}
           </div>
+
+          {/* Payment Pipeline — invoices for this contract */}
+          <PaymentPipeline contractId={contract.id} contractNumber={contract.contractNumber} />
         </div>
       )}
     </div>
@@ -689,46 +832,6 @@ function Contracts() {
           {contracts.some(c => c.contractNumber === 'FA8750-25-F-0018') && (
             <div className="mb-6">
               <SBIRTimeline phases={defaultSBIRPhases} />
-            </div>
-          )}
-
-          {/* Invoice History */}
-          {invoices.length > 0 && (
-            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 sm:p-5">
-              <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wide mb-3">Invoice History</h3>
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="text-left text-xs font-medium text-gray-500 uppercase border-b border-gray-200">
-                      <th className="pb-2 pr-4">ID</th>
-                      <th className="pb-2 pr-4">CLIN</th>
-                      <th className="pb-2 pr-4">Amount</th>
-                      <th className="pb-2 pr-4">Status</th>
-                      <th className="pb-2 pr-4">Submitted</th>
-                      <th className="pb-2">Description</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-100">
-                    {invoices.map(inv => (
-                      <tr key={inv.id}>
-                        <td className="py-2 pr-4 font-mono text-xs text-gray-700">{inv.id}</td>
-                        <td className="py-2 pr-4 text-gray-700">{inv.clinNumber}</td>
-                        <td className="py-2 pr-4 font-medium text-gray-900">{formatCurrency(inv.amount)}</td>
-                        <td className="py-2 pr-4">
-                          <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
-                            inv.status === 'DISBURSED' ? 'bg-green-100 text-green-800' :
-                            inv.status === 'FLAGGED' ? 'bg-amber-100 text-amber-800' :
-                            inv.status === 'REJECTED' ? 'bg-red-100 text-red-800' :
-                            'bg-blue-100 text-blue-800'
-                          }`}>{inv.status}</span>
-                        </td>
-                        <td className="py-2 pr-4 text-xs text-gray-500">{new Date(inv.submittedAt).toLocaleDateString()}</td>
-                        <td className="py-2 text-xs text-gray-600 max-w-[200px] truncate">{inv.description}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
             </div>
           )}
         </>
