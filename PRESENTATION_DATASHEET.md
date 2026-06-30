@@ -6,13 +6,13 @@
 
 | Metric | Value |
 |--------|-------|
-| **Total User Prompts** | ~45 prompts |
-| **Estimated Input Tokens** | ~120,000 tokens |
-| **Estimated Output Tokens** | ~850,000 tokens |
-| **Estimated Total Tokens** | ~970,000 tokens |
-| **Estimated Cost (Claude Sonnet via Kiro)** | ~$12–$18 (based on Anthropic API pricing: $3/M input, $15/M output) |
+| **Total User Prompts** | ~65 prompts |
+| **Estimated Input Tokens** | ~200,000 tokens |
+| **Estimated Output Tokens** | ~1,400,000 tokens |
+| **Estimated Total Tokens** | ~1,600,000 tokens |
+| **Estimated Cost (Claude Sonnet via Kiro)** | ~$20–$28 (based on Anthropic API pricing: $3/M input, $15/M output) |
 
-*Note: Exact token counts are not available from the Kiro IDE. These are estimates based on conversation length, code generated (~35,000+ lines), and sub-agent dispatches (~80+ parallel task executions).*
+*Note: Exact token counts are not available from the Kiro IDE. These are estimates based on conversation length, code generated (~40,000+ lines), and sub-agent dispatches (~80+ parallel task executions). Includes Phase 2 MVP work: Bedrock Lambda integration, payment pipeline visualization, proposal evaluation service, and multiple deployment iterations.*
 
 ### Development Time
 
@@ -22,19 +22,22 @@
 | Phase 1: Core Backend + Frontend | ~2 hours | 94 tasks |
 | Phase 2: Chatbot, Multichannel, Correspondence | ~45 min | 15 tasks |
 | UX Iterations (Contracts, Solicitations, Roles) | ~1 hour | 5 major refactors |
-| Infrastructure + Deployment | ~20 min | CDK bootstrap + 8 deploys |
-| **Total Development Time** | **~4.5 hours** | **113 spec tasks + 5 ad-hoc** |
+| Phase 3: AI Evaluation, Payment Pipeline, Bug Fixes | ~1.5 hours | Lambda + 8 iterations |
+| Infrastructure + Deployment | ~30 min | CDK bootstrap + 15 deploys |
+| **Total Development Time** | **~6 hours** | **113 spec tasks + 12 ad-hoc** |
 
 ### Code Output
 
 | Category | Files | Lines of Code |
 |----------|-------|---------------|
 | Go Backend (agents, coordinator, portal, chatbot, correspondence, ingestion) | 65+ | ~12,000 |
+| Go Lambda (proposal evaluation with Bedrock) | 3 | ~250 |
 | Go Tests (unit + property-based) | 40+ | ~8,000 |
-| React Frontend (TypeScript) | 25+ | ~9,000 |
-| AWS CDK Infrastructure (TypeScript) | 5 | ~300 |
+| React Frontend (TypeScript) | 28+ | ~11,000 |
+| Frontend Services (evaluation, chat) | 3 | ~250 |
+| AWS CDK Infrastructure (TypeScript) | 5 | ~350 |
 | Documentation & Scripts | 4 | ~600 |
-| **Total** | **~140 files** | **~30,000 lines** |
+| **Total** | **~150 files** | **~32,500 lines** |
 
 ---
 
@@ -58,7 +61,9 @@
 
 | Service | Purpose | Estimated Monthly Cost (Nominal) |
 |---------|---------|----------------------------------|
-| **Amazon Bedrock (Claude Sonnet)** | Document extraction, FAR compliance evaluation, chatbot, correspondence generation | $50–$200 (depends on document volume; ~$3/1M input tokens, $15/1M output tokens) |
+| **Amazon Bedrock (Nova Pro)** | Proposal-to-SOW evaluation, CLIN extraction, compliance analysis | $20–$100 (depends on proposal volume; ~$0.80/1M input tokens, $3.20/1M output tokens) |
+| **Amazon Bedrock (Claude Sonnet 4.6)** | Document extraction, FAR compliance evaluation (when Marketplace access enabled) | $50–$200 ($3/1M input, $15/1M output) |
+| **Lambda Function URL** | Serverless API for real-time proposal evaluation | Included in Lambda costs |
 
 ### Networking & Delivery
 
@@ -99,15 +104,19 @@
 ## Architecture Highlights
 
 - **5 Specialized AI Agents**: Document Processing, Validation, Compliance, Routing, Disbursement
+- **Real AI Evaluation**: Amazon Nova Pro (Bedrock) evaluates proposals against SOW in real-time
 - **Multi-Agent Orchestration**: AWS Step Functions with retry/escalation logic
 - **Property-Based Testing**: 35+ formal correctness properties validated with `pgregory.net/rapid`
+- **Payment Pipeline Visualization**: Per-contract step-by-step disbursement tracking (Submit → Compliance → Review → Approve → Disburse)
 - **Real-Time Pipeline**: WebSocket-based payment tracking with live agent progress
 - **Role-Based Access Control**: GOV and VENDOR views with vendor isolation
+- **Manual Approval with Justification**: GOV can approve proposals without AI eval using documented rationale
 - **Persistent State**: localStorage (frontend demo) + DynamoDB (production)
 - **Multichannel Ingestion**: Email, fax, mail scanning, portal upload
-- **AI Chatbot**: Bedrock-powered assistant with RBAC-scoped data access
+- **AI Chatbot**: Pattern-matched assistant with in-app reset command
 - **Correspondence Generation**: Automated professional letters for all payment actions
 - **Handwriting Recognition**: Textract-based fallback for handwritten forms
+- **Lambda Function URL**: Serverless API endpoint for async AI evaluation (no API Gateway needed)
 
 ---
 
@@ -116,10 +125,12 @@
 | Resource | URL/Identifier |
 |----------|---------------|
 | **Frontend (CloudFront)** | https://d2wbk4dmt2edww.cloudfront.net |
+| **Evaluation Lambda URL** | https://yoviof6vsz5k6kzevbhazlmehy0joqii.lambda-url.us-east-1.on.aws/ |
 | **GitHub Repository** | https://github.com/s2g1/AWS_Public_Hacks |
 | **AWS Account** | 361274344489 |
 | **Region** | us-east-1 |
 | **CDK Stack** | InfraStack |
+| **Bedrock Model** | us.amazon.nova-pro-v1:0 (Amazon Nova Pro) |
 
 ---
 
