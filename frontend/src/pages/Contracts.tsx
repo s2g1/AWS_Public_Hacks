@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { useAppContext, Contract, Invoice, CLINItem, ContractMod } from '../store/AppContext'
 
 // --- Types ---
@@ -162,10 +162,12 @@ function CLINRow({ clin, isExpanded, onToggle }: { clin: CLINItem; isExpanded: b
 // --- Invoice Submission Form ---
 
 function InvoiceForm({ contract, onSubmit, onClose }: { contract: Contract; onSubmit: (clinNumber: string, amount: number, description: string) => void; onClose: () => void }) {
+  const [activeTab, setActiveTab] = useState<'manual' | 'upload'>('manual')
   const [clinNumber, setClinNumber] = useState(contract.clins[0]?.clinNumber || '')
   const [amount, setAmount] = useState('')
   const [description, setDescription] = useState('')
   const [error, setError] = useState('')
+  const [uploadedFile, setUploadedFile] = useState<string>('')
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -173,6 +175,25 @@ function InvoiceForm({ contract, onSubmit, onClose }: { contract: Contract; onSu
     if (!parsedAmount || parsedAmount <= 0) { setError('Please enter a valid amount'); return }
     if (!description.trim()) { setError('Please enter a description'); return }
     onSubmit(clinNumber, parsedAmount, description)
+  }
+
+  function handleFileUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (file) {
+      setUploadedFile(file.name)
+      // Simulate OCR extraction
+      const simulatedAmount = Math.floor(Math.random() * 50000) + 25000
+      setAmount(String(simulatedAmount))
+      setDescription(`Extracted from ${file.name}`)
+      setError('')
+    }
+  }
+
+  function handleFileSubmit() {
+    if (!uploadedFile) { setError('Please upload a file'); return }
+    const parsedAmount = parseFloat(amount.replace(/,/g, ''))
+    if (!parsedAmount || parsedAmount <= 0) { setError('Invalid extracted amount'); return }
+    onSubmit(clinNumber, parsedAmount, description || `Extracted from ${uploadedFile}`)
   }
 
   return (
@@ -184,29 +205,96 @@ function InvoiceForm({ contract, onSubmit, onClose }: { contract: Contract; onSu
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
           </button>
         </div>
-        <form onSubmit={handleSubmit} className="p-6 space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">CLIN</label>
-            <select value={clinNumber} onChange={(e) => setClinNumber(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm">
-              {contract.clins.map(c => (
-                <option key={c.clinNumber} value={c.clinNumber}>CLIN {c.clinNumber} - {c.description} (Remaining: {formatCurrency(c.ceiling - c.expended)})</option>
-              ))}
-            </select>
+
+        {/* Tab Switcher */}
+        <div className="flex border-b border-gray-200">
+          <button
+            onClick={() => setActiveTab('manual')}
+            className={`flex-1 py-3 text-sm font-medium text-center transition-colors ${activeTab === 'manual' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-gray-500 hover:text-gray-700'}`}
+          >
+            Manual Input
+          </button>
+          <button
+            onClick={() => setActiveTab('upload')}
+            className={`flex-1 py-3 text-sm font-medium text-center transition-colors ${activeTab === 'upload' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-gray-500 hover:text-gray-700'}`}
+          >
+            File Upload
+          </button>
+        </div>
+
+        {activeTab === 'manual' ? (
+          <form onSubmit={handleSubmit} className="p-6 space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">CLIN</label>
+              <select value={clinNumber} onChange={(e) => setClinNumber(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm">
+                {contract.clins.map(c => (
+                  <option key={c.clinNumber} value={c.clinNumber}>CLIN {c.clinNumber} - {c.description} (Remaining: {formatCurrency(c.ceiling - c.expended)})</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Amount ($)</label>
+              <input type="text" value={amount} onChange={(e) => setAmount(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm" placeholder="e.g., 50000" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+              <textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={3} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm" placeholder="Describe the work performed..." />
+            </div>
+            {error && <p className="text-xs text-red-600">{error}</p>}
+            <div className="flex justify-end gap-3 pt-2">
+              <button type="button" onClick={onClose} className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50">Cancel</button>
+              <button type="submit" className="px-4 py-2 text-sm font-medium text-white bg-green-600 rounded-lg hover:bg-green-700">Submit Invoice</button>
+            </div>
+          </form>
+        ) : (
+          <div className="p-6 space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">CLIN</label>
+              <select value={clinNumber} onChange={(e) => setClinNumber(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm">
+                {contract.clins.map(c => (
+                  <option key={c.clinNumber} value={c.clinNumber}>CLIN {c.clinNumber} - {c.description} (Remaining: {formatCurrency(c.ceiling - c.expended)})</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Upload Invoice</label>
+              <input
+                type="file"
+                accept=".pdf,.doc,.docx,.txt,.zip"
+                onChange={handleFileUpload}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm file:mr-4 file:py-1 file:px-3 file:rounded file:border-0 file:text-sm file:font-medium file:bg-green-50 file:text-green-700 hover:file:bg-green-100"
+              />
+              {uploadedFile && (
+                <p className="mt-1 text-xs text-green-600">📎 {uploadedFile}</p>
+              )}
+            </div>
+            {uploadedFile && (
+              <>
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                  <p className="text-xs font-medium text-blue-800 mb-1">🤖 Simulated OCR Extraction:</p>
+                  <p className="text-sm text-blue-900">Amount: <span className="font-semibold">${parseFloat(amount).toLocaleString()}</span></p>
+                  <p className="text-xs text-blue-700 mt-1">Description: {description}</p>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Extracted Amount ($)</label>
+                  <input type="text" value={amount} onChange={(e) => setAmount(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm" />
+                </div>
+              </>
+            )}
+            {error && <p className="text-xs text-red-600">{error}</p>}
+            <div className="flex justify-end gap-3 pt-2">
+              <button type="button" onClick={onClose} className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50">Cancel</button>
+              <button
+                type="button"
+                onClick={handleFileSubmit}
+                disabled={!uploadedFile}
+                className="px-4 py-2 text-sm font-medium text-white bg-green-600 rounded-lg hover:bg-green-700 disabled:bg-gray-300 disabled:cursor-not-allowed"
+              >
+                Submit Invoice
+              </button>
+            </div>
           </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Amount ($)</label>
-            <input type="text" value={amount} onChange={(e) => setAmount(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm" placeholder="e.g., 50000" />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
-            <textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={3} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm" placeholder="Describe the work performed..." />
-          </div>
-          {error && <p className="text-xs text-red-600">{error}</p>}
-          <div className="flex justify-end gap-3 pt-2">
-            <button type="button" onClick={onClose} className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50">Cancel</button>
-            <button type="submit" className="px-4 py-2 text-sm font-medium text-white bg-green-600 rounded-lg hover:bg-green-700">Submit Invoice</button>
-          </div>
-        </form>
+        )}
       </div>
     </div>
   )
@@ -282,6 +370,11 @@ function PendingModsPanel({ mods, isGov, onApprove, onReject }: { mods: Contract
   const pending = mods.filter(m => m.status === 'SUBMITTED' || m.status === 'UNDER_REVIEW')
   if (pending.length === 0) return null
 
+  function getActionOwner(mod: ContractMod): string {
+    if (mod.requestedBy === 'VENDOR') return 'Pending: GOV Review'
+    return 'Pending: Vendor Response'
+  }
+
   return (
     <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
       <h4 className="text-sm font-semibold text-blue-900 mb-2">📋 Pending Modifications ({pending.length})</h4>
@@ -290,7 +383,10 @@ function PendingModsPanel({ mods, isGov, onApprove, onReject }: { mods: Contract
           <div key={mod.id} className="bg-white border border-blue-200 rounded-lg p-3">
             <div className="flex items-center justify-between mb-1">
               <span className="text-sm font-medium text-gray-900">{mod.title}</span>
-              <span className="text-xs px-2 py-0.5 rounded-full bg-blue-100 text-blue-800 font-medium">{mod.type}</span>
+              <div className="flex items-center gap-2">
+                <span className="text-xs px-2 py-0.5 rounded-full bg-blue-100 text-blue-800 font-medium">{mod.type}</span>
+                <span className="text-xs px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 font-medium">{getActionOwner(mod)}</span>
+              </div>
             </div>
             <p className="text-xs text-gray-600 mb-1">{mod.description}</p>
             <div className="flex items-center justify-between">
@@ -455,9 +551,13 @@ function Contracts() {
   const isGov = state.currentRole === 'GOV'
 
   // Vendor scoping: vendor sees only their contracts
-  const contracts = isGov
-    ? state.contracts
-    : state.contracts.filter(c => c.contractor === state.vendorCompany)
+  // Sort by upcoming POP end date (soonest first)
+  const contracts = useMemo(() => {
+    const filtered = isGov
+      ? state.contracts
+      : state.contracts.filter(c => c.contractor === state.vendorCompany)
+    return [...filtered].sort((a, b) => new Date(a.popEnd).getTime() - new Date(b.popEnd).getTime())
+  }, [state.contracts, isGov, state.vendorCompany])
 
   const invoices = state.invoices
 

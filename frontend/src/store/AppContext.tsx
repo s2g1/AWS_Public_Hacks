@@ -26,6 +26,15 @@ export interface Solicitation {
   evaluationCriteria: string
   awardedTo?: string
   awardedProposalId?: string
+  attachmentName?: string
+}
+
+export interface AIEvaluation {
+  summary: string
+  clinBreakdown: CLINItem[]
+  boeAllocation: string
+  score: number
+  recommendation: 'APPROVE' | 'REVIEW' | 'REJECT'
 }
 
 export interface Proposal {
@@ -40,6 +49,8 @@ export interface Proposal {
   status: 'SUBMITTED' | 'UNDER_REVIEW' | 'APPROVED' | 'REJECTED'
   clinStructure?: CLINItem[]
   boeInfo?: string
+  attachmentName?: string
+  aiEvaluation?: AIEvaluation
 }
 
 export interface Contract {
@@ -133,12 +144,13 @@ interface AppContextValue {
   switchRole: (role: 'GOV' | 'VENDOR') => void
   createSolicitation: (data: Omit<Solicitation, 'id' | 'solicitationNumber' | 'postedDate' | 'status'>) => void
   publishSolicitation: (id: string) => void
-  submitProposal: (solicitationId: string, data: Omit<Proposal, 'id' | 'solicitationId' | 'submittedAt' | 'status'>) => void
+  submitProposal: (solicitationId: string, data: Omit<Proposal, 'id' | 'solicitationId' | 'submittedAt' | 'status' | 'aiEvaluation'>) => void
   approveProposal: (proposalId: string) => void
   rejectProposal: (proposalId: string) => void
   submitInvoice: (contractId: string, clinNumber: string, amount: number, description: string) => void
   approveInvoice: (invoiceId: string, justification?: string) => void
   rejectInvoice: (invoiceId: string, reason: string) => void
+  generateProposalEvaluation: (proposalId: string) => void
   submitContractMod: (contractId: string, type: 'REA' | 'ECP' | 'GOV_MOD', title: string, description: string, amount: number) => void
   approveContractMod: (modId: string) => void
   rejectContractMod: (modId: string) => void
@@ -526,7 +538,49 @@ export function AppProvider({ children }: { children: ReactNode }) {
     })
   }, [])
 
-  const submitProposal = useCallback((solicitationId: string, data: Omit<Proposal, 'id' | 'solicitationId' | 'submittedAt' | 'status'>) => {
+  const generateProposalEvaluation = useCallback((proposalId: string) => {
+    setState(prev => {
+      const proposal = prev.proposals.find(p => p.id === proposalId)
+      if (!proposal) return prev
+
+      const price = proposal.priceProposal
+      const rdAmount = Math.round(price * 0.55)
+      const integrationAmount = Math.round(price * 0.30)
+      const pmAmount = Math.round(price * 0.15)
+
+      const score = Math.floor(Math.random() * 21) + 75 // 75-95
+
+      let recommendation: 'APPROVE' | 'REVIEW' | 'REJECT'
+      if (score > 85) recommendation = 'APPROVE'
+      else if (score >= 70) recommendation = 'REVIEW'
+      else recommendation = 'REJECT'
+
+      const summary = `Proposal demonstrates ${score > 85 ? 'strong' : 'adequate'} technical capability in ${proposal.technicalApproach.split(' ').slice(0, 8).join(' ')}... Price proposal of $${price.toLocaleString()} is ${score > 80 ? 'competitive' : 'within acceptable range'} for the scope of work. Past performance indicators suggest ${score > 85 ? 'high' : 'moderate'} probability of successful execution.`
+
+      const aiEvaluation: AIEvaluation = {
+        summary,
+        clinBreakdown: [
+          { clinNumber: '0001', description: 'Research & Development', type: 'CPFF', ceiling: rdAmount, obligated: 0, expended: 0 },
+          { clinNumber: '0002', description: 'System Integration & Testing', type: 'CPFF', ceiling: integrationAmount, obligated: 0, expended: 0 },
+          { clinNumber: '0003', description: 'Program Management', type: 'FFP', ceiling: pmAmount, obligated: 0, expended: 0 },
+        ],
+        boeAllocation: `R&D: ${((rdAmount / price) * 100).toFixed(0)}% ($${rdAmount.toLocaleString()}) | Integration: ${((integrationAmount / price) * 100).toFixed(0)}% ($${integrationAmount.toLocaleString()}) | PM: ${((pmAmount / price) * 100).toFixed(0)}% ($${pmAmount.toLocaleString()})`,
+        score,
+        recommendation,
+      }
+
+      return {
+        ...prev,
+        proposals: prev.proposals.map(p =>
+          p.id === proposalId ? { ...p, aiEvaluation } : p
+        ),
+        notifications: addNotification(prev.notifications, 'GOV', `AI evaluation complete for proposal from ${proposal.companyName} — Score: ${score}/100, Recommendation: ${recommendation}`, 'info', proposalId),
+        history: addHistory(prev.history, 'GOV', 'AI Evaluation Engine', 'Evaluation Generated', `Generated AI evaluation for ${proposal.companyName} proposal — Score: ${score}/100`, proposalId),
+      }
+    })
+  }, [])
+
+  const submitProposal = useCallback((solicitationId: string, data: Omit<Proposal, 'id' | 'solicitationId' | 'submittedAt' | 'status' | 'aiEvaluation'>) => {
     const id = `prop-${Date.now()}`
     const newProposal: Proposal = {
       ...data,
@@ -544,7 +598,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
         history: addHistory(prev.history, 'VENDOR', data.companyName, 'Proposal Submitted', `Submitted proposal for "${sol?.title || 'Unknown'}" — $${data.priceProposal.toLocaleString()}`, id),
       }
     })
-  }, [])
+    // Trigger AI evaluation after brief delay
+    setTimeout(() => {
+      generateProposalEvaluation(id)
+    }, 1500)
+  }, [generateProposalEvaluation])
 
   const approveProposal = useCallback((proposalId: string) => {
     setState(prev => {
@@ -821,6 +879,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     submitProposal,
     approveProposal,
     rejectProposal,
+    generateProposalEvaluation,
     submitInvoice,
     approveInvoice,
     rejectInvoice,

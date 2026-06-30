@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react'
-import { useAppContext, Solicitation, Proposal } from '../store/AppContext'
+import { useAppContext, Solicitation, Proposal, AIEvaluation } from '../store/AppContext'
 
 // --- Local Types ---
 
@@ -12,6 +12,7 @@ interface ProposalForm {
   priceProposal: string
   pastPerformance: string
   keyPersonnel: string
+  attachmentName: string
 }
 
 interface CreateSolicitationForm {
@@ -22,6 +23,7 @@ interface CreateSolicitationForm {
   estimatedValue: string
   closeDate: string
   evaluationCriteria: string
+  attachmentName: string
 }
 
 // --- Utility Functions ---
@@ -116,6 +118,7 @@ function CreateSolicitationModal({
     estimatedValue: '',
     closeDate: '',
     evaluationCriteria: '',
+    attachmentName: '',
   })
   const [errors, setErrors] = useState<Record<string, string>>({})
 
@@ -244,6 +247,22 @@ function CreateSolicitationModal({
             />
           </div>
 
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Upload PWS/SOW/RFP Document</label>
+            <input
+              type="file"
+              accept=".pdf,.doc,.docx,.txt,.zip"
+              onChange={(e) => {
+                const file = e.target.files?.[0]
+                if (file) setForm({ ...form, attachmentName: file.name })
+              }}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 file:mr-4 file:py-1 file:px-3 file:rounded file:border-0 file:text-sm file:font-medium file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+            />
+            {form.attachmentName && (
+              <p className="mt-1 text-xs text-green-600">📎 {form.attachmentName}</p>
+            )}
+          </div>
+
           <div className="flex justify-end gap-3 pt-4 border-t border-gray-200">
             <button
               type="button"
@@ -282,6 +301,7 @@ function ProposalModal({
     priceProposal: '',
     pastPerformance: '',
     keyPersonnel: '',
+    attachmentName: '',
   })
   const [errors, setErrors] = useState<Record<string, string>>({})
 
@@ -387,6 +407,22 @@ function ProposalModal({
             />
           </div>
 
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">📤 Upload Proposal Document</label>
+            <input
+              type="file"
+              accept=".pdf,.doc,.docx,.txt,.zip"
+              onChange={(e) => {
+                const file = e.target.files?.[0]
+                if (file) setForm({ ...form, attachmentName: file.name })
+              }}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 file:mr-4 file:py-1 file:px-3 file:rounded file:border-0 file:text-sm file:font-medium file:bg-green-50 file:text-green-700 hover:file:bg-green-100"
+            />
+            {form.attachmentName && (
+              <p className="mt-1 text-xs text-green-600">📎 {form.attachmentName}</p>
+            )}
+          </div>
+
           <div className="flex justify-end gap-3 pt-4 border-t border-gray-200">
             <button
               type="button"
@@ -425,9 +461,17 @@ function ProposalsReviewPanel({
 }) {
   const solProposals = proposals.filter(p => p.solicitationId === solicitation.id)
 
+  function getRecommendationColor(rec: AIEvaluation['recommendation']) {
+    switch (rec) {
+      case 'APPROVE': return 'bg-green-100 text-green-800 border-green-200'
+      case 'REVIEW': return 'bg-yellow-100 text-yellow-800 border-yellow-200'
+      case 'REJECT': return 'bg-red-100 text-red-800 border-red-200'
+    }
+  }
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-      <div className="bg-white rounded-xl shadow-xl w-full max-w-3xl max-h-[90vh] overflow-y-auto">
+      <div className="bg-white rounded-xl shadow-xl w-full max-w-4xl max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
           <div>
             <h2 className="text-lg font-semibold text-gray-900">Review Proposals</h2>
@@ -446,27 +490,67 @@ function ProposalsReviewPanel({
               <p className="text-sm text-gray-500">No proposals submitted yet</p>
             </div>
           ) : (
-            <div className="space-y-4">
+            <div className="space-y-6">
               {solProposals.map(proposal => (
                 <div key={proposal.id} className="border border-gray-200 rounded-lg p-4">
                   <div className="flex items-center justify-between mb-2">
                     <h3 className="font-semibold text-gray-900">{proposal.companyName}</h3>
-                    <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
-                      proposal.status === 'SUBMITTED' ? 'bg-yellow-100 text-yellow-800' :
-                      proposal.status === 'APPROVED' ? 'bg-green-100 text-green-800' :
-                      proposal.status === 'REJECTED' ? 'bg-red-100 text-red-800' :
-                      'bg-blue-100 text-blue-800'
-                    }`}>
-                      {proposal.status}
-                    </span>
+                    <div className="flex items-center gap-2">
+                      {proposal.attachmentName && (
+                        <span className="text-xs text-blue-600 bg-blue-50 px-2 py-0.5 rounded">📎 {proposal.attachmentName}</span>
+                      )}
+                      <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
+                        proposal.status === 'SUBMITTED' ? 'bg-yellow-100 text-yellow-800' :
+                        proposal.status === 'APPROVED' ? 'bg-green-100 text-green-800' :
+                        proposal.status === 'REJECTED' ? 'bg-red-100 text-red-800' :
+                        'bg-blue-100 text-blue-800'
+                      }`}>
+                        {proposal.status}
+                      </span>
+                    </div>
                   </div>
-                  <p className="text-sm text-gray-600 mb-2 line-clamp-2">{proposal.technicalApproach}</p>
+                  <p className="text-sm text-gray-600 mb-2">{proposal.technicalApproach}</p>
                   <div className="flex items-center gap-4 text-xs text-gray-500 mb-3">
                     <span>Price: ${proposal.priceProposal.toLocaleString()}</span>
                     <span>Submitted: {new Date(proposal.submittedAt).toLocaleDateString()}</span>
                   </div>
+
+                  {/* AI Evaluation Section */}
+                  {proposal.aiEvaluation && (
+                    <div className="mt-3 bg-gray-50 border border-gray-200 rounded-lg p-4">
+                      <div className="flex items-center justify-between mb-3">
+                        <h4 className="text-sm font-semibold text-gray-900">🤖 AI Evaluation</h4>
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-bold text-gray-900">Score: {proposal.aiEvaluation.score}/100</span>
+                          <span className={`px-2 py-0.5 rounded-full text-xs font-semibold border ${getRecommendationColor(proposal.aiEvaluation.recommendation)}`}>
+                            {proposal.aiEvaluation.recommendation}
+                          </span>
+                        </div>
+                      </div>
+                      <p className="text-sm text-gray-700 mb-3">{proposal.aiEvaluation.summary}</p>
+
+                      <div className="mb-3">
+                        <h5 className="text-xs font-semibold text-gray-600 uppercase mb-1">CLIN Breakdown</h5>
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                          {proposal.aiEvaluation.clinBreakdown.map(clin => (
+                            <div key={clin.clinNumber} className="bg-white border border-gray-200 rounded p-2">
+                              <p className="text-xs font-medium text-gray-900">CLIN {clin.clinNumber}</p>
+                              <p className="text-xs text-gray-600">{clin.description}</p>
+                              <p className="text-xs font-semibold text-gray-900">${clin.ceiling.toLocaleString()}</p>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
+                      <div>
+                        <h5 className="text-xs font-semibold text-gray-600 uppercase mb-1">BOE Allocation</h5>
+                        <p className="text-xs text-gray-700 bg-white border border-gray-200 rounded p-2">{proposal.aiEvaluation.boeAllocation}</p>
+                      </div>
+                    </div>
+                  )}
+
                   {proposal.status === 'SUBMITTED' && (
-                    <div className="flex gap-2">
+                    <div className="flex gap-2 mt-3">
                       <button
                         onClick={() => onApprove(proposal.id)}
                         className="px-3 py-1.5 text-xs font-medium text-white bg-green-600 rounded-lg hover:bg-green-700"
@@ -501,6 +585,7 @@ function SolicitationDetail({
   onPublish,
   onReviewProposals,
   isGov,
+  onDownloadRFP,
 }: {
   solicitation: Solicitation
   proposalCount: number
@@ -509,6 +594,7 @@ function SolicitationDetail({
   onPublish: () => void
   onReviewProposals: () => void
   isGov: boolean
+  onDownloadRFP: (filename: string) => void
 }) {
   const daysRemaining = getDaysRemaining(solicitation.closeDate)
 
@@ -590,6 +676,14 @@ function SolicitationDetail({
             </div>
           )}
 
+          {solicitation.attachmentName && (
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+              <p className="text-sm text-blue-800">
+                📎 Attached Document: <span className="font-semibold">{solicitation.attachmentName}</span>
+              </p>
+            </div>
+          )}
+
           {proposalCount > 0 && (
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
               <p className="text-sm text-blue-800">
@@ -600,6 +694,16 @@ function SolicitationDetail({
 
           {/* Actions based on role and status */}
           <div className="pt-2 flex gap-3 flex-wrap">
+            {/* Download RFP for vendors */}
+            {!isGov && solicitation.attachmentName && (
+              <button
+                onClick={() => onDownloadRFP(solicitation.attachmentName!)}
+                className="px-6 py-3 text-sm font-medium text-blue-700 bg-blue-50 border border-blue-200 rounded-lg hover:bg-blue-100 transition-colors"
+              >
+                📥 Download RFP ({solicitation.attachmentName})
+              </button>
+            )}
+
             {/* GOV: Publish draft */}
             {isGov && solicitation.status === 'DRAFT' && (
               <button
@@ -642,57 +746,91 @@ function SolicitationCard({
   solicitation,
   proposalCount,
   onClick,
+  isVendor,
+  vendorCompany,
+  onDownloadRFP,
 }: {
   solicitation: Solicitation
   proposalCount: number
   onClick: () => void
+  isVendor: boolean
+  vendorCompany: string
+  onDownloadRFP?: (filename: string) => void
 }) {
   const daysRemaining = getDaysRemaining(solicitation.closeDate)
+  const isAwardedToOther = solicitation.status === 'AWARDED' && solicitation.awardedTo !== vendorCompany
 
   return (
-    <button
-      onClick={onClick}
-      className="w-full text-left bg-white rounded-lg shadow-sm border border-gray-200 p-4 sm:p-5 hover:border-blue-300 hover:shadow-md transition-all"
-    >
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-2 flex-wrap mb-1">
-            <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold border ${getStatusBadgeClasses(solicitation.status as SolicitationStatus)}`}>
-              {solicitation.status}
-            </span>
-            <span className="text-xs font-mono text-gray-500">{solicitation.solicitationNumber}</span>
-            <span className="text-xs text-gray-400 bg-gray-100 px-2 py-0.5 rounded">{solicitation.type}</span>
-          </div>
-          <h3 className="text-sm sm:text-base font-semibold text-gray-900 mt-1">{solicitation.title}</h3>
-          <p className="text-xs sm:text-sm text-gray-500 mt-1">{solicitation.agency}</p>
-        </div>
-
-        <div className="text-right flex-shrink-0">
-          {solicitation.estimatedValue && (
-            <p className="text-xs sm:text-sm font-medium text-gray-900">{solicitation.estimatedValue}</p>
-          )}
-          {solicitation.status === 'OPEN' && daysRemaining > 0 && (
-            <div className={`mt-1 text-xs font-medium ${daysRemaining <= 7 ? 'text-red-600' : daysRemaining <= 14 ? 'text-amber-600' : 'text-green-600'}`}>
-              {daysRemaining} days left
+    <div className="w-full text-left bg-white rounded-lg shadow-sm border border-gray-200 p-4 sm:p-5 hover:border-blue-300 hover:shadow-md transition-all">
+      <button
+        onClick={onClick}
+        className="w-full text-left"
+      >
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-2 flex-wrap mb-1">
+              <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold border ${getStatusBadgeClasses(solicitation.status as SolicitationStatus)}`}>
+                {solicitation.status}
+              </span>
+              {isVendor && isAwardedToOther && (
+                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold border bg-red-100 text-red-800 border-red-300">
+                  Not Awarded
+                </span>
+              )}
+              {isVendor && solicitation.status === 'AWARDED' && solicitation.awardedTo === vendorCompany && (
+                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold border bg-green-100 text-green-800 border-green-300">
+                  ✓ Awarded to You
+                </span>
+              )}
+              <span className="text-xs font-mono text-gray-500">{solicitation.solicitationNumber}</span>
+              <span className="text-xs text-gray-400 bg-gray-100 px-2 py-0.5 rounded">{solicitation.type}</span>
             </div>
+            <h3 className="text-sm sm:text-base font-semibold text-gray-900 mt-1">{solicitation.title}</h3>
+            <p className="text-xs sm:text-sm text-gray-500 mt-1">{solicitation.agency}</p>
+          </div>
+
+          <div className="text-right flex-shrink-0">
+            {solicitation.estimatedValue && (
+              <p className="text-xs sm:text-sm font-medium text-gray-900">{solicitation.estimatedValue}</p>
+            )}
+            {solicitation.status === 'OPEN' && daysRemaining > 0 && (
+              <div className={`mt-1 text-xs font-medium ${daysRemaining <= 7 ? 'text-red-600' : daysRemaining <= 14 ? 'text-amber-600' : 'text-green-600'}`}>
+                {daysRemaining} days left
+              </div>
+            )}
+          </div>
+        </div>
+
+        <div className="flex items-center gap-4 mt-3 pt-3 border-t border-gray-100 text-xs text-gray-500">
+          <span>Posted: {formatDate(solicitation.postedDate)}</span>
+          <span>Closes: {formatDate(solicitation.closeDate)}</span>
+          {proposalCount > 0 && (
+            <span className="text-blue-600 font-medium">
+              {proposalCount} {proposalCount === 1 ? 'Proposal' : 'Proposals'}
+            </span>
+          )}
+          {solicitation.awardedTo && (
+            <span className="text-purple-600 font-medium">
+              Awarded: {solicitation.awardedTo}
+            </span>
+          )}
+          {solicitation.attachmentName && (
+            <span className="text-blue-600">📎 RFP attached</span>
           )}
         </div>
-      </div>
+      </button>
 
-      <div className="flex items-center gap-4 mt-3 pt-3 border-t border-gray-100 text-xs text-gray-500">
-        <span>Posted: {formatDate(solicitation.postedDate)}</span>
-        <span>Closes: {formatDate(solicitation.closeDate)}</span>
-        {proposalCount > 0 && (
-          <span className="text-blue-600 font-medium">
-            {proposalCount} {proposalCount === 1 ? 'Proposal' : 'Proposals'}
-          </span>
-        )}
-        {solicitation.awardedTo && (
-          <span className="text-purple-600 font-medium">
-            Awarded: {solicitation.awardedTo}
-          </span>
-        )}
-      </div>
+      {/* Download RFP button for vendors on OPEN solicitations */}
+      {isVendor && solicitation.status === 'OPEN' && solicitation.attachmentName && onDownloadRFP && (
+        <div className="mt-2 pt-2 border-t border-gray-100">
+          <button
+            onClick={(e) => { e.stopPropagation(); onDownloadRFP(solicitation.attachmentName!) }}
+            className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-blue-700 bg-blue-50 border border-blue-200 rounded-lg hover:bg-blue-100 transition-colors"
+          >
+            📥 Download RFP
+          </button>
+        </div>
+      )}
 
       {solicitation.status === 'OPEN' && daysRemaining > 0 && (
         <div className="mt-3">
@@ -710,7 +848,7 @@ function SolicitationCard({
           </div>
         </div>
       )}
-    </button>
+    </div>
   )
 }
 
@@ -748,13 +886,13 @@ function Solicitations() {
   const [showReviewPanel, setShowReviewPanel] = useState(false)
   const [toast, setToast] = useState<string | null>(null)
 
-  // VENDOR sees OPEN (all) + AWARDED only if awarded to their company; GOV sees all
+  // VENDOR sees: OPEN (all) + AWARDED if awarded to their company + AWARDED to others (show "Not Awarded" badge)
   const visibleSolicitations = useMemo(() => {
     if (isGov) return state.solicitations
     return state.solicitations.filter(s =>
-      s.status === 'OPEN' || (s.status === 'AWARDED' && s.awardedTo === state.vendorCompany)
+      s.status === 'OPEN' || s.status === 'AWARDED'
     )
-  }, [state.solicitations, isGov, state.vendorCompany])
+  }, [state.solicitations, isGov])
 
   // Filter solicitations
   const filteredSolicitations = useMemo(() => {
@@ -805,6 +943,7 @@ function Solicitations() {
       estimatedValue: form.estimatedValue,
       closeDate: form.closeDate,
       evaluationCriteria: form.evaluationCriteria,
+      attachmentName: form.attachmentName || undefined,
     })
     setShowCreateModal(false)
     showToast(`Solicitation "${form.title}" created as DRAFT`)
@@ -819,9 +958,10 @@ function Solicitations() {
         priceProposal: parseFloat(form.priceProposal.replace(/,/g, '')) || 0,
         pastPerformance: form.pastPerformance,
         keyPersonnel: form.keyPersonnel,
+        attachmentName: form.attachmentName || undefined,
       })
       setShowProposalModal(false)
-      showToast('Proposal submitted successfully!')
+      showToast('Proposal submitted successfully! AI evaluation will be generated shortly.')
     }
   }
 
@@ -846,6 +986,11 @@ function Solicitations() {
   function handleRejectProposal(proposalId: string) {
     rejectProposal(proposalId)
     showToast('Proposal rejected.')
+  }
+
+  // Handle download RFP (simulated)
+  function handleDownloadRFP(filename: string) {
+    showToast(`Downloading ${filename}...`)
   }
 
   return (
@@ -909,6 +1054,9 @@ function Solicitations() {
               solicitation={solicitation}
               proposalCount={getProposalCount(solicitation.id)}
               onClick={() => setSelectedSolicitation(solicitation)}
+              isVendor={!isGov}
+              vendorCompany={state.vendorCompany}
+              onDownloadRFP={handleDownloadRFP}
             />
           ))
         )}
@@ -931,6 +1079,7 @@ function Solicitations() {
           onPublish={handlePublish}
           onReviewProposals={() => setShowReviewPanel(true)}
           isGov={isGov}
+          onDownloadRFP={handleDownloadRFP}
         />
       )}
 
