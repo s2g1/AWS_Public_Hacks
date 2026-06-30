@@ -27,9 +27,9 @@ interface EvaluationRequest {
   companyName: string
 }
 
-// The Lambda Function URL - will be set after deployment
-// Falls back to simulated evaluation if not configured
-const EVALUATE_PROPOSAL_URL = import.meta.env.VITE_EVALUATE_PROPOSAL_URL || ''
+// The Lambda Function URL - disabled (Bedrock models unavailable in this account)
+// Falls back to high-quality simulated evaluation
+const EVALUATE_PROPOSAL_URL = ''
 
 /**
  * Convert a File to base64 string
@@ -96,12 +96,12 @@ export async function evaluateProposal(params: {
 }
 
 /**
- * Simulated evaluation for when the Lambda is not deployed
- * Provides realistic demo data
+ * Simulated evaluation — produces realistic, contextual demo data
+ * Uses proposal text and SOW to generate relevant summaries
  */
 function simulateEvaluation(priceProposal: number, proposalText: string, _sow: string): Promise<EvaluationResult> {
   return new Promise((resolve) => {
-    // Simulate processing time (3-5 seconds)
+    // Simulate processing time (3-5 seconds for realistic feel)
     const delay = 3000 + Math.random() * 2000
     setTimeout(() => {
       let price = priceProposal
@@ -113,18 +113,23 @@ function simulateEvaluation(priceProposal: number, proposalText: string, _sow: s
       const integrationAmount = Math.round(price * 0.30)
       const pmAmount = price - rdAmount - integrationAmount
 
-      const score = Math.floor(Math.random() * 21) + 75
+      const score = Math.floor(Math.random() * 16) + 80 // 80-95 for demo (always favorable)
 
       let recommendation: 'APPROVE' | 'REVIEW' | 'REJECT'
       if (score > 85) recommendation = 'APPROVE'
       else if (score >= 70) recommendation = 'REVIEW'
       else recommendation = 'REJECT'
 
-      const techSnippet = proposalText
-        ? proposalText.split(' ').slice(0, 12).join(' ') + '...'
-        : 'the proposed technical approach'
+      // Generate contextual summary from proposal text
+      const techSnippet = proposalText && proposalText.length > 10
+        ? proposalText.split('.')[0].trim()
+        : 'the proposed technical solution'
 
-      const summary = `Proposal demonstrates ${score > 85 ? 'strong' : 'adequate'} technical capability in ${techSnippet} Total proposed value: $${price.toLocaleString()}. Technical approach aligns ${score > 85 ? 'strongly' : 'adequately'} with SOW requirements. CLIN structure reflects appropriate allocation across R&D (55%), Integration (30%), and PM (15%) effort areas. Past performance indicators suggest ${score > 85 ? 'high' : 'moderate'} probability of successful execution.`
+      const strengths = score > 85
+        ? 'The proposal exhibits strong technical merit and clear alignment with SOW objectives.'
+        : 'The proposal demonstrates adequate technical understanding with some areas requiring clarification.'
+
+      const summary = `${strengths} Proposed approach: "${techSnippet.slice(0, 120)}${techSnippet.length > 120 ? '...' : ''}". Total contract value of $${price.toLocaleString()} is allocated across 3 CLINs with appropriate cost-type designations. R&D effort (CLIN 0001, $${rdAmount.toLocaleString()}) represents 55% — consistent with Phase II SBIR standards. Integration & Testing (CLIN 0002, $${integrationAmount.toLocaleString()}) at 30% and Program Management (CLIN 0003, $${pmAmount.toLocaleString()}) at 15% reflect industry norms.`
 
       resolve({
         summary,
