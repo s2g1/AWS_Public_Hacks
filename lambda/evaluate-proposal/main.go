@@ -103,7 +103,7 @@ func handler(ctx context.Context, request events.LambdaFunctionURLRequest) (even
 	client := bedrockruntime.NewFromConfig(cfg)
 	modelID := os.Getenv("BEDROCK_MODEL_ID")
 	if modelID == "" {
-		modelID = "anthropic.claude-sonnet-4-20250514-v1:0"
+		modelID = "us.anthropic.claude-sonnet-4-20250514-v1:0"
 	}
 
 	// Build content blocks
