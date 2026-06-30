@@ -1,26 +1,10 @@
 import { useState, useMemo } from 'react'
+import { useAppContext, Solicitation, Proposal } from '../store/AppContext'
 
-// --- Types ---
+// --- Local Types ---
 
 type SolicitationStatus = 'DRAFT' | 'OPEN' | 'CLOSED' | 'AWARDED' | 'CANCELLED'
 type SolicitationType = 'SBIR Phase I' | 'SBIR Phase II' | 'Full & Open Competition' | 'Sole Source'
-
-interface Solicitation {
-  id: string
-  solicitationNumber: string
-  title: string
-  type: SolicitationType
-  agency: string
-  postedDate: string
-  closeDate: string
-  status: SolicitationStatus
-  description: string
-  naicsCode: string
-  estimatedValue: string
-  evaluationCriteria: string
-  awardee?: string
-  responsesCount: number
-}
 
 interface ProposalForm {
   companyName: string
@@ -39,63 +23,6 @@ interface CreateSolicitationForm {
   closeDate: string
   evaluationCriteria: string
 }
-
-// --- Initial Mock Data ---
-
-const initialSolicitations: Solicitation[] = [
-  {
-    id: '1',
-    solicitationNumber: 'FA8750-25-SBIR-0042',
-    title: 'Agentic AI for Federal Payment Modernization',
-    type: 'SBIR Phase II',
-    agency: 'AFRL / Air Force Research Laboratory',
-    postedDate: '2024-12-15',
-    closeDate: '2025-01-15',
-    status: 'AWARDED',
-    description:
-      'The Air Force Research Laboratory seeks innovative solutions leveraging agentic AI architectures to modernize federal payment processing systems. The solution must demonstrate autonomous document extraction, intelligent validation, and adaptive disbursement routing capabilities while maintaining FedRAMP High compliance.',
-    naicsCode: '541512',
-    estimatedValue: '$750K - $1.5M',
-    evaluationCriteria:
-      'Technical Approach (40%), Past Performance (25%), Price (20%), Key Personnel (15%)',
-    awardee: 'Quantum Federal Systems LLC',
-    responsesCount: 7,
-  },
-  {
-    id: '2',
-    solicitationNumber: 'FA8750-25-RFP-0098',
-    title: 'Next-Generation Document Intelligence Platform',
-    type: 'Full & Open Competition',
-    agency: 'AFRL / Air Force Research Laboratory',
-    postedDate: '2025-06-01',
-    closeDate: '2025-07-15',
-    status: 'OPEN',
-    description:
-      'AFRL requires a cloud-native document intelligence platform capable of processing unstructured federal financial documents at scale. The platform must support OCR, NLP-based entity extraction, automated classification, and integration with existing Treasury systems. Must achieve 99.5% accuracy on standard government form types (SF-1034, SF-1035, DD-250).',
-    naicsCode: '541511',
-    estimatedValue: '$2.5M - $5M',
-    evaluationCriteria:
-      'Technical Capability (35%), Management Approach (20%), Past Performance (25%), Price (20%)',
-    responsesCount: 0,
-  },
-  {
-    id: '3',
-    solicitationNumber: 'FA8750-25-SBIR-0103',
-    title: 'Cloud-Native Financial Reporting System',
-    type: 'SBIR Phase I',
-    agency: 'AFRL / Air Force Research Laboratory',
-    postedDate: '2025-06-10',
-    closeDate: '2025-08-01',
-    status: 'DRAFT',
-    description:
-      'Seeking innovative small businesses to develop a cloud-native financial reporting system that provides real-time visibility into federal payment pipelines, obligation tracking, and disbursement analytics with role-based access controls.',
-    naicsCode: '541519',
-    estimatedValue: '$150K - $250K',
-    evaluationCriteria:
-      'Technical Merit (45%), Feasibility (25%), Commercial Potential (15%), Price (15%)',
-    responsesCount: 0,
-  },
-]
 
 // --- Utility Functions ---
 
@@ -227,7 +154,6 @@ function CreateSolicitationModal({
         </div>
 
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
-          {/* Title */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Title <span className="text-red-500">*</span>
@@ -244,7 +170,6 @@ function CreateSolicitationModal({
             {errors.title && <p className="mt-1 text-xs text-red-600">{errors.title}</p>}
           </div>
 
-          {/* Type */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Type</label>
             <select
@@ -259,7 +184,6 @@ function CreateSolicitationModal({
             </select>
           </div>
 
-          {/* Description / SOW */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Description / SOW Summary</label>
             <textarea
@@ -271,7 +195,6 @@ function CreateSolicitationModal({
             />
           </div>
 
-          {/* NAICS Code and Estimated Value */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">NAICS Code</label>
@@ -295,7 +218,6 @@ function CreateSolicitationModal({
             </div>
           </div>
 
-          {/* Close Date */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Close Date <span className="text-red-500">*</span>
@@ -311,7 +233,6 @@ function CreateSolicitationModal({
             {errors.closeDate && <p className="mt-1 text-xs text-red-600">{errors.closeDate}</p>}
           </div>
 
-          {/* Evaluation Criteria */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Evaluation Criteria</label>
             <textarea
@@ -323,7 +244,6 @@ function CreateSolicitationModal({
             />
           </div>
 
-          {/* Actions */}
           <div className="flex justify-end gap-3 pt-4 border-t border-gray-200">
             <button
               type="button"
@@ -354,7 +274,7 @@ function ProposalModal({
 }: {
   solicitation: Solicitation
   onClose: () => void
-  onSubmit: () => void
+  onSubmit: (form: ProposalForm) => void
 }) {
   const [form, setForm] = useState<ProposalForm>({
     companyName: '',
@@ -377,7 +297,7 @@ function ProposalModal({
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     if (validate()) {
-      onSubmit()
+      onSubmit(form)
     }
   }
 
@@ -440,7 +360,7 @@ function ProposalModal({
               className={`w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
                 errors.priceProposal ? 'border-red-300' : 'border-gray-300'
               }`}
-              placeholder="e.g., 3,500,000"
+              placeholder="e.g., 3500000"
             />
             {errors.priceProposal && <p className="mt-1 text-xs text-red-600">{errors.priceProposal}</p>}
           </div>
@@ -488,16 +408,107 @@ function ProposalModal({
   )
 }
 
+// --- Proposals Review Panel (GOV) ---
+
+function ProposalsReviewPanel({
+  solicitation,
+  proposals,
+  onApprove,
+  onReject,
+  onClose,
+}: {
+  solicitation: Solicitation
+  proposals: Proposal[]
+  onApprove: (proposalId: string) => void
+  onReject: (proposalId: string) => void
+  onClose: () => void
+}) {
+  const solProposals = proposals.filter(p => p.solicitationId === solicitation.id)
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+      <div className="bg-white rounded-xl shadow-xl w-full max-w-3xl max-h-[90vh] overflow-y-auto">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
+          <div>
+            <h2 className="text-lg font-semibold text-gray-900">Review Proposals</h2>
+            <p className="text-xs text-gray-500 mt-0.5">{solicitation.solicitationNumber} — {solicitation.title}</p>
+          </div>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+
+        <div className="p-6">
+          {solProposals.length === 0 ? (
+            <div className="text-center py-8">
+              <p className="text-sm text-gray-500">No proposals submitted yet</p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {solProposals.map(proposal => (
+                <div key={proposal.id} className="border border-gray-200 rounded-lg p-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <h3 className="font-semibold text-gray-900">{proposal.companyName}</h3>
+                    <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
+                      proposal.status === 'SUBMITTED' ? 'bg-yellow-100 text-yellow-800' :
+                      proposal.status === 'APPROVED' ? 'bg-green-100 text-green-800' :
+                      proposal.status === 'REJECTED' ? 'bg-red-100 text-red-800' :
+                      'bg-blue-100 text-blue-800'
+                    }`}>
+                      {proposal.status}
+                    </span>
+                  </div>
+                  <p className="text-sm text-gray-600 mb-2 line-clamp-2">{proposal.technicalApproach}</p>
+                  <div className="flex items-center gap-4 text-xs text-gray-500 mb-3">
+                    <span>Price: ${proposal.priceProposal.toLocaleString()}</span>
+                    <span>Submitted: {new Date(proposal.submittedAt).toLocaleDateString()}</span>
+                  </div>
+                  {proposal.status === 'SUBMITTED' && (
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => onApprove(proposal.id)}
+                        className="px-3 py-1.5 text-xs font-medium text-white bg-green-600 rounded-lg hover:bg-green-700"
+                      >
+                        Approve & Award
+                      </button>
+                      <button
+                        onClick={() => onReject(proposal.id)}
+                        className="px-3 py-1.5 text-xs font-medium text-red-700 bg-red-50 border border-red-200 rounded-lg hover:bg-red-100"
+                      >
+                        Reject
+                      </button>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
+
 // --- Solicitation Detail Panel ---
 
 function SolicitationDetail({
   solicitation,
+  proposalCount,
   onClose,
   onSubmitProposal,
+  onPublish,
+  onReviewProposals,
+  isGov,
 }: {
   solicitation: Solicitation
+  proposalCount: number
   onClose: () => void
   onSubmitProposal: () => void
+  onPublish: () => void
+  onReviewProposals: () => void
+  isGov: boolean
 }) {
   const daysRemaining = getDaysRemaining(solicitation.closeDate)
 
@@ -507,7 +518,7 @@ function SolicitationDetail({
         <div className="px-6 py-4 border-b border-gray-200">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold border ${getStatusBadgeClasses(solicitation.status)}`}>
+              <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold border ${getStatusBadgeClasses(solicitation.status as SolicitationStatus)}`}>
                 {solicitation.status}
               </span>
               <span className="text-sm font-mono text-gray-500">{solicitation.solicitationNumber}</span>
@@ -522,7 +533,6 @@ function SolicitationDetail({
         </div>
 
         <div className="p-6 space-y-6">
-          {/* Key Info Grid */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-3">
               <div>
@@ -561,21 +571,18 @@ function SolicitationDetail({
             </div>
           </div>
 
-          {/* Awardee info for awarded solicitations */}
-          {solicitation.awardee && (
+          {solicitation.awardedTo && (
             <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
               <p className="text-xs font-medium text-purple-600 uppercase mb-1">Award Recipient</p>
-              <p className="text-sm font-semibold text-purple-900">{solicitation.awardee}</p>
+              <p className="text-sm font-semibold text-purple-900">{solicitation.awardedTo}</p>
             </div>
           )}
 
-          {/* Description */}
           <div>
             <h3 className="text-sm font-semibold text-gray-900 mb-2">Description / Statement of Work</h3>
             <p className="text-sm text-gray-700 leading-relaxed">{solicitation.description}</p>
           </div>
 
-          {/* Evaluation Criteria */}
           {solicitation.evaluationCriteria && (
             <div>
               <h3 className="text-sm font-semibold text-gray-900 mb-2">Evaluation Criteria</h3>
@@ -583,26 +590,46 @@ function SolicitationDetail({
             </div>
           )}
 
-          {/* Responses */}
-          {solicitation.responsesCount > 0 && (
+          {proposalCount > 0 && (
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
               <p className="text-sm text-blue-800">
-                <span className="font-semibold">{solicitation.responsesCount}</span> {solicitation.responsesCount === 1 ? 'Response' : 'Responses'} Received
+                <span className="font-semibold">{proposalCount}</span> {proposalCount === 1 ? 'Proposal' : 'Proposals'} Received
               </p>
             </div>
           )}
 
-          {/* Submit Proposal Button - only for OPEN solicitations */}
-          {solicitation.status === 'OPEN' && (
-            <div className="pt-2">
+          {/* Actions based on role and status */}
+          <div className="pt-2 flex gap-3 flex-wrap">
+            {/* GOV: Publish draft */}
+            {isGov && solicitation.status === 'DRAFT' && (
+              <button
+                onClick={onPublish}
+                className="px-6 py-3 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors"
+              >
+                Publish Solicitation
+              </button>
+            )}
+
+            {/* GOV: Review proposals */}
+            {isGov && proposalCount > 0 && solicitation.status !== 'AWARDED' && (
+              <button
+                onClick={onReviewProposals}
+                className="px-6 py-3 text-sm font-medium text-white bg-purple-600 rounded-lg hover:bg-purple-700 focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 transition-colors"
+              >
+                Review Proposals ({proposalCount})
+              </button>
+            )}
+
+            {/* VENDOR: Submit proposal on OPEN */}
+            {!isGov && solicitation.status === 'OPEN' && (
               <button
                 onClick={onSubmitProposal}
-                className="w-full sm:w-auto px-6 py-3 text-sm font-medium text-white bg-green-600 rounded-lg hover:bg-green-700 focus:ring-2 focus:ring-green-500 focus:ring-offset-2 transition-colors"
+                className="px-6 py-3 text-sm font-medium text-white bg-green-600 rounded-lg hover:bg-green-700 focus:ring-2 focus:ring-green-500 focus:ring-offset-2 transition-colors"
               >
                 Submit Proposal
               </button>
-            </div>
-          )}
+            )}
+          </div>
         </div>
       </div>
     </div>
@@ -613,9 +640,11 @@ function SolicitationDetail({
 
 function SolicitationCard({
   solicitation,
+  proposalCount,
   onClick,
 }: {
   solicitation: Solicitation
+  proposalCount: number
   onClick: () => void
 }) {
   const daysRemaining = getDaysRemaining(solicitation.closeDate)
@@ -628,7 +657,7 @@ function SolicitationCard({
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2 flex-wrap mb-1">
-            <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold border ${getStatusBadgeClasses(solicitation.status)}`}>
+            <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold border ${getStatusBadgeClasses(solicitation.status as SolicitationStatus)}`}>
               {solicitation.status}
             </span>
             <span className="text-xs font-mono text-gray-500">{solicitation.solicitationNumber}</span>
@@ -638,7 +667,6 @@ function SolicitationCard({
           <p className="text-xs sm:text-sm text-gray-500 mt-1">{solicitation.agency}</p>
         </div>
 
-        {/* Right side info */}
         <div className="text-right flex-shrink-0">
           {solicitation.estimatedValue && (
             <p className="text-xs sm:text-sm font-medium text-gray-900">{solicitation.estimatedValue}</p>
@@ -651,23 +679,21 @@ function SolicitationCard({
         </div>
       </div>
 
-      {/* Bottom meta */}
       <div className="flex items-center gap-4 mt-3 pt-3 border-t border-gray-100 text-xs text-gray-500">
         <span>Posted: {formatDate(solicitation.postedDate)}</span>
         <span>Closes: {formatDate(solicitation.closeDate)}</span>
-        {solicitation.responsesCount > 0 && (
+        {proposalCount > 0 && (
           <span className="text-blue-600 font-medium">
-            {solicitation.responsesCount} {solicitation.responsesCount === 1 ? 'Response' : 'Responses'}
+            {proposalCount} {proposalCount === 1 ? 'Proposal' : 'Proposals'}
           </span>
         )}
-        {solicitation.awardee && (
+        {solicitation.awardedTo && (
           <span className="text-purple-600 font-medium">
-            Awarded: {solicitation.awardee}
+            Awarded: {solicitation.awardedTo}
           </span>
         )}
       </div>
 
-      {/* Timeline bar for OPEN */}
       {solicitation.status === 'OPEN' && daysRemaining > 0 && (
         <div className="mt-3">
           <div className="flex justify-between text-xs text-gray-400 mb-1">
@@ -711,17 +737,26 @@ function Toast({ message, onClose }: { message: string; onClose: () => void }) {
 // --- Main Solicitations Component ---
 
 function Solicitations() {
-  const [solicitations, setSolicitations] = useState<Solicitation[]>(initialSolicitations)
+  const { state, createSolicitation, publishSolicitation, submitProposal, approveProposal, rejectProposal } = useAppContext()
+  const isGov = state.currentRole === 'GOV'
+
   const [activeTab, setActiveTab] = useState('ALL')
   const [searchQuery, setSearchQuery] = useState('')
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [selectedSolicitation, setSelectedSolicitation] = useState<Solicitation | null>(null)
   const [showProposalModal, setShowProposalModal] = useState(false)
+  const [showReviewPanel, setShowReviewPanel] = useState(false)
   const [toast, setToast] = useState<string | null>(null)
+
+  // VENDOR only sees OPEN + AWARDED, GOV sees all
+  const visibleSolicitations = useMemo(() => {
+    if (isGov) return state.solicitations
+    return state.solicitations.filter(s => s.status === 'OPEN' || s.status === 'AWARDED')
+  }, [state.solicitations, isGov])
 
   // Filter solicitations
   const filteredSolicitations = useMemo(() => {
-    let filtered = solicitations
+    let filtered = visibleSolicitations
     if (activeTab !== 'ALL') {
       filtered = filtered.filter((s) => s.status === activeTab)
     }
@@ -735,16 +770,21 @@ function Solicitations() {
       )
     }
     return filtered
-  }, [solicitations, activeTab, searchQuery])
+  }, [visibleSolicitations, activeTab, searchQuery])
 
   // Count by status
   const counts = useMemo(() => {
-    const c: Record<string, number> = { ALL: solicitations.length }
-    for (const s of solicitations) {
+    const c: Record<string, number> = { ALL: visibleSolicitations.length }
+    for (const s of visibleSolicitations) {
       c[s.status] = (c[s.status] || 0) + 1
     }
     return c
-  }, [solicitations])
+  }, [visibleSolicitations])
+
+  // Get proposal count for a solicitation
+  function getProposalCount(solId: string): number {
+    return state.proposals.filter(p => p.solicitationId === solId).length
+  }
 
   // Show toast with auto-dismiss
   function showToast(message: string) {
@@ -754,45 +794,56 @@ function Solicitations() {
 
   // Handle create solicitation
   function handleCreateSolicitation(form: CreateSolicitationForm) {
-    const newId = String(Date.now())
-    const solNum = `FA8750-25-SBIR-${String(Math.floor(Math.random() * 9000) + 1000)}`
-    const newSolicitation: Solicitation = {
-      id: newId,
-      solicitationNumber: solNum,
+    createSolicitation({
       title: form.title,
       type: form.type,
       agency: 'AFRL / Air Force Research Laboratory',
-      postedDate: new Date().toISOString().split('T')[0],
-      closeDate: form.closeDate,
-      status: 'DRAFT',
       description: form.description,
       naicsCode: form.naicsCode,
       estimatedValue: form.estimatedValue,
+      closeDate: form.closeDate,
       evaluationCriteria: form.evaluationCriteria,
-      responsesCount: 0,
-    }
-    setSolicitations((prev) => [newSolicitation, ...prev])
+    })
     setShowCreateModal(false)
     showToast(`Solicitation "${form.title}" created as DRAFT`)
   }
 
   // Handle proposal submission
-  function handleProposalSubmit() {
+  function handleProposalSubmit(form: ProposalForm) {
     if (selectedSolicitation) {
-      setSolicitations((prev) =>
-        prev.map((s) =>
-          s.id === selectedSolicitation.id
-            ? { ...s, responsesCount: s.responsesCount + 1 }
-            : s
-        )
-      )
-      setSelectedSolicitation({
-        ...selectedSolicitation,
-        responsesCount: selectedSolicitation.responsesCount + 1,
+      submitProposal(selectedSolicitation.id, {
+        companyName: form.companyName,
+        technicalApproach: form.technicalApproach,
+        priceProposal: parseFloat(form.priceProposal.replace(/,/g, '')) || 0,
+        pastPerformance: form.pastPerformance,
+        keyPersonnel: form.keyPersonnel,
       })
       setShowProposalModal(false)
-      showToast('Proposal submitted successfully! You will receive a confirmation email.')
+      showToast('Proposal submitted successfully!')
     }
+  }
+
+  // Handle publish
+  function handlePublish() {
+    if (selectedSolicitation) {
+      publishSolicitation(selectedSolicitation.id)
+      setSelectedSolicitation(null)
+      showToast('Solicitation published and now OPEN for proposals')
+    }
+  }
+
+  // Handle approve proposal
+  function handleApproveProposal(proposalId: string) {
+    approveProposal(proposalId)
+    setShowReviewPanel(false)
+    setSelectedSolicitation(null)
+    showToast('Proposal approved! Contract created and solicitation awarded.')
+  }
+
+  // Handle reject proposal
+  function handleRejectProposal(proposalId: string) {
+    rejectProposal(proposalId)
+    showToast('Proposal rejected.')
   }
 
   return (
@@ -802,18 +853,22 @@ function Solicitations() {
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Solicitations</h1>
           <p className="mt-1 text-sm text-gray-500">
-            Browse open opportunities and manage federal procurement solicitations
+            {isGov
+              ? 'Manage federal procurement solicitations and review proposals'
+              : 'Browse open opportunities and submit proposals'}
           </p>
         </div>
-        <button
-          onClick={() => setShowCreateModal(true)}
-          className="inline-flex items-center gap-2 px-4 py-2.5 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
-        >
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-          </svg>
-          Create Solicitation
-        </button>
+        {isGov && (
+          <button
+            onClick={() => setShowCreateModal(true)}
+            className="inline-flex items-center gap-2 px-4 py-2.5 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+            </svg>
+            Create Solicitation
+          </button>
+        )}
       </div>
 
       {/* Filters */}
@@ -850,6 +905,7 @@ function Solicitations() {
             <SolicitationCard
               key={solicitation.id}
               solicitation={solicitation}
+              proposalCount={getProposalCount(solicitation.id)}
               onClick={() => setSelectedSolicitation(solicitation)}
             />
           ))
@@ -864,11 +920,15 @@ function Solicitations() {
         />
       )}
 
-      {selectedSolicitation && !showProposalModal && (
+      {selectedSolicitation && !showProposalModal && !showReviewPanel && (
         <SolicitationDetail
           solicitation={selectedSolicitation}
+          proposalCount={getProposalCount(selectedSolicitation.id)}
           onClose={() => setSelectedSolicitation(null)}
           onSubmitProposal={() => setShowProposalModal(true)}
+          onPublish={handlePublish}
+          onReviewProposals={() => setShowReviewPanel(true)}
+          isGov={isGov}
         />
       )}
 
@@ -877,6 +937,16 @@ function Solicitations() {
           solicitation={selectedSolicitation}
           onClose={() => setShowProposalModal(false)}
           onSubmit={handleProposalSubmit}
+        />
+      )}
+
+      {showReviewPanel && selectedSolicitation && (
+        <ProposalsReviewPanel
+          solicitation={selectedSolicitation}
+          proposals={state.proposals}
+          onApprove={handleApproveProposal}
+          onReject={handleRejectProposal}
+          onClose={() => setShowReviewPanel(false)}
         />
       )}
 

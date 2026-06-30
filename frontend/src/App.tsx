@@ -1,5 +1,7 @@
 import { Routes, Route } from 'react-router-dom'
+import { AppProvider } from './store/AppContext'
 import MainLayout from './components/layout/MainLayout'
+import RoleSwitcher from './components/RoleSwitcher'
 import Dashboard from './pages/Dashboard'
 import Payments from './pages/Payments'
 import Upload from './pages/Upload'
@@ -11,7 +13,8 @@ import ChatWidget from './components/ChatWidget'
 
 function App() {
   return (
-    <>
+    <AppProvider>
+      <RoleSwitcher />
       <MainLayout>
         <Routes>
           <Route path="/" element={<Dashboard />} />
@@ -24,7 +27,7 @@ function App() {
         </Routes>
       </MainLayout>
       <ChatWidget />
-    </>
+    </AppProvider>
   )
 }
 

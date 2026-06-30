@@ -1,80 +1,14 @@
 import { Link } from 'react-router-dom'
+import { useAppContext } from '../store/AppContext'
 
-// --- Sample Data ---
-
-interface SummaryStats {
-  totalContracts: number
-  activePayments: number
-  pendingREAs: number
-  alerts: number
-}
-
-interface ActivityItem {
-  id: string
-  timestamp: string
-  description: string
-  type: 'payment' | 'contract' | 'alert' | 'rea'
-  status: 'success' | 'warning' | 'error' | 'info'
-}
+// --- Types ---
 
 interface AgentHealth {
   name: string
   status: 'healthy' | 'degraded' | 'offline'
   lastHeartbeat: string
-  throughput: number // messages/min
+  throughput: number
 }
-
-interface ObligationSummary {
-  totalCeiling: number
-  totalObligated: number
-  totalExpended: number
-  contractCount: number
-}
-
-const sampleStats: SummaryStats = {
-  totalContracts: 12,
-  activePayments: 34,
-  pendingREAs: 5,
-  alerts: 3,
-}
-
-const sampleActivity: ActivityItem[] = [
-  {
-    id: '1',
-    timestamp: '2024-12-10T14:32:00Z',
-    description: 'Payment PAY-2024-0891 disbursed to NovaTech Solutions ($45,200)',
-    type: 'payment',
-    status: 'success',
-  },
-  {
-    id: '2',
-    timestamp: '2024-12-10T14:15:00Z',
-    description: 'REA-042 submitted for FA8750-23-C-0042 CLIN 0001 ($125,000)',
-    type: 'rea',
-    status: 'info',
-  },
-  {
-    id: '3',
-    timestamp: '2024-12-10T13:55:00Z',
-    description: 'Compliance alert: OFAC screening flagged payee on PAY-2024-0893',
-    type: 'alert',
-    status: 'error',
-  },
-  {
-    id: '4',
-    timestamp: '2024-12-10T13:40:00Z',
-    description: 'Option CLIN 0004 exercised on contract FA8750-23-C-0042',
-    type: 'contract',
-    status: 'success',
-  },
-  {
-    id: '5',
-    timestamp: '2024-12-10T13:20:00Z',
-    description: 'Validation Agent escalated PAY-2024-0890 (low confidence: 0.62)',
-    type: 'payment',
-    status: 'warning',
-  },
-]
 
 const sampleAgents: AgentHealth[] = [
   { name: 'Document Processing', status: 'healthy', lastHeartbeat: '2s ago', throughput: 12 },
@@ -83,13 +17,6 @@ const sampleAgents: AgentHealth[] = [
   { name: 'Routing', status: 'degraded', lastHeartbeat: '15s ago', throughput: 4 },
   { name: 'Disbursement', status: 'healthy', lastHeartbeat: '2s ago', throughput: 7 },
 ]
-
-const sampleObligation: ObligationSummary = {
-  totalCeiling: 52_400_000,
-  totalObligated: 38_750_000,
-  totalExpended: 24_100_000,
-  contractCount: 12,
-}
 
 // --- Utility Functions ---
 
@@ -100,11 +27,6 @@ function formatCurrency(amount: number): string {
     minimumFractionDigits: 0,
     maximumFractionDigits: 0,
   }).format(amount)
-}
-
-function formatTime(timestamp: string): string {
-  const date = new Date(timestamp)
-  return date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })
 }
 
 function getStatusDotClass(status: AgentHealth['status']): string {
@@ -129,35 +51,9 @@ function getStatusLabel(status: AgentHealth['status']): string {
   }
 }
 
-function getActivityIcon(type: ActivityItem['type']): string {
-  switch (type) {
-    case 'payment':
-      return '💳'
-    case 'contract':
-      return '📄'
-    case 'alert':
-      return '🚨'
-    case 'rea':
-      return '📋'
-  }
-}
-
-function getActivityBorderClass(status: ActivityItem['status']): string {
-  switch (status) {
-    case 'success':
-      return 'border-l-green-500'
-    case 'warning':
-      return 'border-l-yellow-500'
-    case 'error':
-      return 'border-l-red-500'
-    case 'info':
-      return 'border-l-blue-500'
-  }
-}
-
 // --- Components ---
 
-function StatCard({ label, value, icon, accent }: { label: string; value: number; icon: string; accent: string }) {
+function StatCard({ label, value, icon, accent }: { label: string; value: number | string; icon: string; accent: string }) {
   return (
     <div className={`bg-white rounded-lg shadow-sm border-l-4 ${accent} p-4 sm:p-5`}>
       <div className="flex items-center justify-between">
@@ -193,65 +89,139 @@ function ObligationBar({ label, value, total, color }: { label: string; value: n
 // --- Main Component ---
 
 function Dashboard() {
-  const stats = sampleStats
-  const activity = sampleActivity
+  const { state } = useAppContext()
+
+  // Compute real stats from state
+  const totalContracts = state.contracts.length
+  const pendingProposals = state.proposals.filter(p => p.status === 'SUBMITTED').length
+  const openSolicitations = state.solicitations.filter(s => s.status === 'OPEN').length
+  const disbursedPayments = state.payments.filter(p => p.status === 'DISBURSED').length
+  const flaggedInvoices = state.invoices.filter(i => i.status === 'FLAGGED').length
+
+  // Obligation totals from contracts
+  const totalCeiling = state.contracts.reduce((sum, c) => sum + c.totalCeiling, 0)
+  const totalObligated = state.contracts.reduce((sum, c) => sum + c.totalObligated, 0)
+  const totalExpended = state.contracts.reduce((sum, c) => sum + c.totalExpended, 0)
+
+  // Recent activity derived from state
+  const recentActivity: { id: string; description: string; type: 'payment' | 'contract' | 'alert' | 'info'; status: 'success' | 'warning' | 'error' | 'info' }[] = []
+
+  // Add recent payments
+  for (const p of state.payments.slice(-3).reverse()) {
+    recentActivity.push({
+      id: p.id,
+      description: `Payment ${p.id} ${p.status === 'DISBURSED' ? 'disbursed' : 'processing'} (${formatCurrency(p.amount)})`,
+      type: 'payment',
+      status: 'success',
+    })
+  }
+
+  // Add flagged invoices
+  for (const inv of state.invoices.filter(i => i.status === 'FLAGGED').slice(-2)) {
+    recentActivity.push({
+      id: inv.id,
+      description: `Invoice ${inv.id} flagged: ${inv.complianceIssues?.[0] || 'Compliance issue'}`,
+      type: 'alert',
+      status: 'warning',
+    })
+  }
+
+  // Add recent proposals
+  for (const prop of state.proposals.filter(p => p.status === 'SUBMITTED').slice(-2)) {
+    recentActivity.push({
+      id: prop.id,
+      description: `Proposal from ${prop.companyName} pending review`,
+      type: 'info',
+      status: 'info',
+    })
+  }
+
+  // Add recent contract creations
+  for (const c of state.contracts.slice(-2).reverse()) {
+    recentActivity.push({
+      id: c.id,
+      description: `Contract ${c.contractNumber} awarded to ${c.contractor}`,
+      type: 'contract',
+      status: 'success',
+    })
+  }
+
   const agents = sampleAgents
-  const obligation = sampleObligation
   const totalThroughput = agents.reduce((sum, a) => sum + a.throughput, 0)
+
+  function getActivityIcon(type: string): string {
+    switch (type) {
+      case 'payment': return '💳'
+      case 'contract': return '📄'
+      case 'alert': return '🚨'
+      default: return '📋'
+    }
+  }
+
+  function getActivityBorderClass(status: string): string {
+    switch (status) {
+      case 'success': return 'border-l-green-500'
+      case 'warning': return 'border-l-yellow-500'
+      case 'error': return 'border-l-red-500'
+      default: return 'border-l-blue-500'
+    }
+  }
 
   return (
     <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto">
       {/* Header */}
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
-        <p className="mt-1 text-sm text-gray-600">Federal Payment Processing Overview</p>
+        <p className="mt-1 text-sm text-gray-600">
+          Federal Payment Processing Overview — {state.currentRole === 'GOV' ? '🏛️ Government View' : '🏢 Vendor View'}
+        </p>
       </div>
 
       {/* Summary Statistics Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-        <StatCard label="Total Contracts" value={stats.totalContracts} icon="📑" accent="border-blue-500" />
-        <StatCard label="Active Payments" value={stats.activePayments} icon="💳" accent="border-green-500" />
-        <StatCard label="Pending REAs" value={stats.pendingREAs} icon="📋" accent="border-yellow-500" />
-        <StatCard label="Alerts" value={stats.alerts} icon="🔔" accent="border-red-500" />
+        <StatCard label="Total Contracts" value={totalContracts} icon="📑" accent="border-blue-500" />
+        <StatCard label="Open Solicitations" value={openSolicitations} icon="📋" accent="border-green-500" />
+        <StatCard label="Pending Proposals" value={pendingProposals} icon="📝" accent="border-yellow-500" />
+        <StatCard label={flaggedInvoices > 0 ? 'Flagged Invoices' : 'Disbursed Payments'} value={flaggedInvoices > 0 ? flaggedInvoices : disbursedPayments} icon={flaggedInvoices > 0 ? '⚠️' : '💳'} accent={flaggedInvoices > 0 ? 'border-red-500' : 'border-purple-500'} />
       </div>
 
-      {/* Main content grid: Activity Feed + Quick Actions / System Status */}
+      {/* Main content grid */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
         {/* Recent Activity Feed */}
         <div className="lg:col-span-2 bg-white rounded-lg shadow-sm border border-gray-200 p-4 sm:p-5">
           <h2 className="text-lg font-semibold text-gray-900 mb-4">Recent Activity</h2>
           <div className="space-y-3">
-            {activity.map((item) => (
-              <div
-                key={item.id}
-                className={`border-l-4 ${getActivityBorderClass(item.status)} bg-gray-50 rounded-r-lg p-3`}
-              >
-                <div className="flex items-start gap-2">
-                  <span className="text-base flex-shrink-0" aria-hidden="true">{getActivityIcon(item.type)}</span>
-                  <div className="min-w-0 flex-1">
+            {recentActivity.length === 0 ? (
+              <p className="text-sm text-gray-500 py-4 text-center">No recent activity. Start by creating a solicitation or submitting a proposal.</p>
+            ) : (
+              recentActivity.slice(0, 6).map((item) => (
+                <div
+                  key={item.id}
+                  className={`border-l-4 ${getActivityBorderClass(item.status)} bg-gray-50 rounded-r-lg p-3`}
+                >
+                  <div className="flex items-start gap-2">
+                    <span className="text-base flex-shrink-0" aria-hidden="true">{getActivityIcon(item.type)}</span>
                     <p className="text-sm text-gray-800">{item.description}</p>
-                    <p className="text-xs text-gray-500 mt-1">{formatTime(item.timestamp)}</p>
                   </div>
                 </div>
-              </div>
-            ))}
+              ))
+            )}
           </div>
         </div>
 
         {/* Quick Actions + System Status */}
         <div className="space-y-6">
-          {/* Quick Actions */}
           <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 sm:p-5">
             <h2 className="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h2>
             <div className="space-y-3">
               <Link
-                to="/upload"
+                to="/solicitations"
                 className="flex items-center gap-3 w-full p-3 rounded-lg border border-gray-200 hover:bg-blue-50 hover:border-blue-300 transition-colors text-left"
               >
-                <span className="flex items-center justify-center w-9 h-9 rounded-lg bg-blue-100 text-blue-600 text-lg" aria-hidden="true">📤</span>
+                <span className="flex items-center justify-center w-9 h-9 rounded-lg bg-blue-100 text-blue-600 text-lg" aria-hidden="true">📋</span>
                 <div>
-                  <p className="text-sm font-medium text-gray-900">Upload Document</p>
-                  <p className="text-xs text-gray-500">Submit a new document for processing</p>
+                  <p className="text-sm font-medium text-gray-900">Solicitations</p>
+                  <p className="text-xs text-gray-500">{openSolicitations} open opportunities</p>
                 </div>
               </Link>
               <Link
@@ -260,8 +230,8 @@ function Dashboard() {
               >
                 <span className="flex items-center justify-center w-9 h-9 rounded-lg bg-green-100 text-green-600 text-lg" aria-hidden="true">📄</span>
                 <div>
-                  <p className="text-sm font-medium text-gray-900">View Contracts</p>
-                  <p className="text-xs text-gray-500">Contract financials and CLIN details</p>
+                  <p className="text-sm font-medium text-gray-900">Contracts</p>
+                  <p className="text-xs text-gray-500">{totalContracts} active contracts</p>
                 </div>
               </Link>
               <Link
@@ -270,8 +240,8 @@ function Dashboard() {
               >
                 <span className="flex items-center justify-center w-9 h-9 rounded-lg bg-purple-100 text-purple-600 text-lg" aria-hidden="true">💰</span>
                 <div>
-                  <p className="text-sm font-medium text-gray-900">View Payments</p>
-                  <p className="text-xs text-gray-500">Real-time pipeline status</p>
+                  <p className="text-sm font-medium text-gray-900">Payments</p>
+                  <p className="text-xs text-gray-500">{disbursedPayments} disbursed</p>
                 </div>
               </Link>
             </div>
@@ -292,7 +262,6 @@ function Dashboard() {
                   </div>
                   <div className="flex items-center gap-3 text-xs text-gray-500">
                     <span>{agent.throughput} msg/min</span>
-                    <span className="hidden sm:inline">{agent.lastHeartbeat}</span>
                     <span className={`px-1.5 py-0.5 rounded text-xs font-medium ${
                       agent.status === 'healthy' ? 'bg-green-100 text-green-700' :
                       agent.status === 'degraded' ? 'bg-yellow-100 text-yellow-700' :
@@ -309,82 +278,62 @@ function Dashboard() {
       </div>
 
       {/* Obligation Tracking Summary */}
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 sm:p-6">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-5">
-          <div>
-            <h2 className="text-lg font-semibold text-gray-900">Obligation Tracking Summary</h2>
-            <p className="text-sm text-gray-500">Across {obligation.contractCount} active contracts</p>
+      {totalContracts > 0 && (
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 sm:p-6">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-5">
+            <div>
+              <h2 className="text-lg font-semibold text-gray-900">Obligation Tracking Summary</h2>
+              <p className="text-sm text-gray-500">Across {totalContracts} active contract{totalContracts !== 1 ? 's' : ''}</p>
+            </div>
+            <Link to="/contracts" className="text-sm text-blue-600 hover:text-blue-800 font-medium">
+              View Details →
+            </Link>
           </div>
-          <Link
-            to="/contracts"
-            className="text-sm text-blue-600 hover:text-blue-800 font-medium"
-          >
-            View Details →
-          </Link>
-        </div>
 
-        {/* Summary cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
-          <div className="text-center p-4 bg-gray-50 rounded-lg border border-gray-200">
-            <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Total Ceiling</p>
-            <p className="mt-1 text-xl font-bold text-gray-900">{formatCurrency(obligation.totalCeiling)}</p>
+          {/* Summary cards */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+            <div className="text-center p-4 bg-gray-50 rounded-lg border border-gray-200">
+              <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Total Ceiling</p>
+              <p className="mt-1 text-xl font-bold text-gray-900">{formatCurrency(totalCeiling)}</p>
+            </div>
+            <div className="text-center p-4 bg-blue-50 rounded-lg border border-blue-200">
+              <p className="text-xs font-medium text-blue-600 uppercase tracking-wide">Total Obligated</p>
+              <p className="mt-1 text-xl font-bold text-blue-900">{formatCurrency(totalObligated)}</p>
+            </div>
+            <div className="text-center p-4 bg-green-50 rounded-lg border border-green-200">
+              <p className="text-xs font-medium text-green-600 uppercase tracking-wide">Total Expended</p>
+              <p className="mt-1 text-xl font-bold text-green-900">{formatCurrency(totalExpended)}</p>
+            </div>
           </div>
-          <div className="text-center p-4 bg-blue-50 rounded-lg border border-blue-200">
-            <p className="text-xs font-medium text-blue-600 uppercase tracking-wide">Total Obligated</p>
-            <p className="mt-1 text-xl font-bold text-blue-900">{formatCurrency(obligation.totalObligated)}</p>
-          </div>
-          <div className="text-center p-4 bg-green-50 rounded-lg border border-green-200">
-            <p className="text-xs font-medium text-green-600 uppercase tracking-wide">Total Expended</p>
-            <p className="mt-1 text-xl font-bold text-green-900">{formatCurrency(obligation.totalExpended)}</p>
-          </div>
-        </div>
 
-        {/* Progress bars */}
-        <div className="space-y-4">
-          <ObligationBar
-            label="Obligated vs Ceiling"
-            value={obligation.totalObligated}
-            total={obligation.totalCeiling}
-            color="bg-blue-500"
-          />
-          <ObligationBar
-            label="Expended vs Obligated"
-            value={obligation.totalExpended}
-            total={obligation.totalObligated}
-            color="bg-green-500"
-          />
-          <ObligationBar
-            label="Expended vs Ceiling"
-            value={obligation.totalExpended}
-            total={obligation.totalCeiling}
-            color="bg-purple-500"
-          />
-        </div>
-
-        {/* Anti-deficiency warning */}
-        {obligation.totalObligated > obligation.totalCeiling && (
-          <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg flex items-center gap-2" role="alert">
-            <span className="text-red-600 font-bold text-sm">⚠️</span>
-            <p className="text-sm text-red-700">Anti-Deficiency Warning: Total obligations exceed contract ceiling.</p>
+          {/* Progress bars */}
+          <div className="space-y-4">
+            <ObligationBar label="Obligated vs Ceiling" value={totalObligated} total={totalCeiling} color="bg-blue-500" />
+            <ObligationBar label="Expended vs Obligated" value={totalExpended} total={totalObligated} color="bg-green-500" />
+            <ObligationBar label="Expended vs Ceiling" value={totalExpended} total={totalCeiling} color="bg-purple-500" />
           </div>
-        )}
 
-        {/* Remaining capacity */}
-        <div className="mt-4 pt-4 border-t border-gray-200 grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
-          <div>
-            <span className="text-gray-500">Remaining Ceiling Capacity:</span>
-            <span className="ml-2 font-semibold text-gray-900">
-              {formatCurrency(obligation.totalCeiling - obligation.totalObligated)}
-            </span>
-          </div>
-          <div>
-            <span className="text-gray-500">Unspent Obligations:</span>
-            <span className="ml-2 font-semibold text-gray-900">
-              {formatCurrency(obligation.totalObligated - obligation.totalExpended)}
-            </span>
+          {/* Anti-deficiency warning */}
+          {totalObligated > totalCeiling && (
+            <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg flex items-center gap-2" role="alert">
+              <span className="text-red-600 font-bold text-sm">⚠️</span>
+              <p className="text-sm text-red-700">Anti-Deficiency Warning: Total obligations exceed contract ceiling.</p>
+            </div>
+          )}
+
+          {/* Remaining capacity */}
+          <div className="mt-4 pt-4 border-t border-gray-200 grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
+            <div>
+              <span className="text-gray-500">Remaining Ceiling Capacity:</span>
+              <span className="ml-2 font-semibold text-gray-900">{formatCurrency(totalCeiling - totalObligated)}</span>
+            </div>
+            <div>
+              <span className="text-gray-500">Unspent Obligations:</span>
+              <span className="ml-2 font-semibold text-gray-900">{formatCurrency(totalObligated - totalExpended)}</span>
+            </div>
           </div>
         </div>
-      </div>
+      )}
     </div>
   )
 }
