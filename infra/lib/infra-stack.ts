@@ -6,6 +6,8 @@ import * as origins from 'aws-cdk-lib/aws-cloudfront-origins';
 import * as dynamodb from 'aws-cdk-lib/aws-dynamodb';
 import * as iam from 'aws-cdk-lib/aws-iam';
 import * as lambda from 'aws-cdk-lib/aws-lambda';
+import * as apigwv2 from 'aws-cdk-lib/aws-apigatewayv2';
+import * as apigwv2integrations from 'aws-cdk-lib/aws-apigatewayv2-integrations';
 import { Construct } from 'constructs';
 import * as path from 'path';
 
@@ -227,6 +229,101 @@ export class InfraStack extends cdk.Stack {
     new cdk.CfnOutput(this, 'EvaluateProposalUrl', {
       value: fnUrl.url,
       description: 'Lambda Function URL for proposal evaluation',
+    });
+
+    // =========================================================================
+    // Lambda: State Sync (S3-backed shared state for multi-browser demo)
+    // =========================================================================
+
+    const stateSyncFn = new lambda.Function(this, 'StateSyncFn', {
+      functionName: `fedpay-state-sync-${this.region}`,
+      runtime: lambda.Runtime.PROVIDED_AL2023,
+      handler: 'bootstrap',
+      code: lambda.Code.fromAsset(path.join(__dirname, '../../lambda/state-sync/dist')),
+      timeout: cdk.Duration.seconds(10),
+      memorySize: 128,
+      environment: {
+        STATE_BUCKET: ingestionBucket.bucketName,
+      },
+    });
+
+    // Grant S3 read/write to the state sync Lambda
+    ingestionBucket.grantReadWrite(stateSyncFn);
+
+    // Create Function URL
+    const stateSyncUrl = stateSyncFn.addFunctionUrl({
+      authType: lambda.FunctionUrlAuthType.NONE,
+      cors: {
+        allowedOrigins: ['*'],
+        allowedMethods: [lambda.HttpMethod.GET, lambda.HttpMethod.PUT, lambda.HttpMethod.POST],
+        allowedHeaders: ['Content-Type'],
+      },
+    });
+
+    new cdk.CfnOutput(this, 'StateSyncUrl', {
+      value: stateSyncUrl.url,
+      description: 'Lambda Function URL for state synchronization',
+    });
+
+    // =========================================================================
+    // WebSocket API (Event Bus for multi-browser state sync)
+    // =========================================================================
+
+    // Connections table to track active WebSocket clients
+    const connectionsTable = new dynamodb.Table(this, 'WsConnectionsTable', {
+      tableName: `fedpay-ws-connections-${this.account}`,
+      partitionKey: { name: 'connectionId', type: dynamodb.AttributeType.STRING },
+      billingMode: dynamodb.BillingMode.PAY_PER_REQUEST,
+      removalPolicy: cdk.RemovalPolicy.DESTROY,
+    });
+
+    // Lambda for $connect and $disconnect routes
+    const wsConnectFn = new lambda.Function(this, 'WsConnectFn', {
+      functionName: `fedpay-ws-connect-${this.region}`,
+      runtime: lambda.Runtime.PROVIDED_AL2023,
+      handler: 'bootstrap',
+      code: lambda.Code.fromAsset(path.join(__dirname, '../../lambda/ws-connect/dist')),
+      timeout: cdk.Duration.seconds(10),
+      memorySize: 128,
+      environment: {
+        CONNECTIONS_TABLE: connectionsTable.tableName,
+      },
+    });
+    connectionsTable.grantReadWriteData(wsConnectFn);
+
+    // WebSocket API
+    const wsApi = new apigwv2.WebSocketApi(this, 'FedPayWsApi', {
+      apiName: 'fedpay-state-sync-ws',
+      connectRouteOptions: {
+        integration: new apigwv2integrations.WebSocketLambdaIntegration('ConnectInteg', wsConnectFn),
+      },
+      disconnectRouteOptions: {
+        integration: new apigwv2integrations.WebSocketLambdaIntegration('DisconnectInteg', wsConnectFn),
+      },
+    });
+
+    const wsStage = new apigwv2.WebSocketStage(this, 'FedPayWsStage', {
+      webSocketApi: wsApi,
+      stageName: 'prod',
+      autoDeploy: true,
+    });
+
+    // Grant state-sync Lambda permission to post to WebSocket connections
+    const wsManagePolicy = new iam.PolicyStatement({
+      effect: iam.Effect.ALLOW,
+      actions: ['execute-api:ManageConnections'],
+      resources: [`arn:aws:execute-api:${this.region}:${this.account}:${wsApi.apiId}/prod/POST/@connections/*`],
+    });
+    stateSyncFn.addToRolePolicy(wsManagePolicy);
+    connectionsTable.grantReadData(stateSyncFn);
+
+    // Update state-sync Lambda with WS endpoint and connections table
+    stateSyncFn.addEnvironment('CONNECTIONS_TABLE', connectionsTable.tableName);
+    stateSyncFn.addEnvironment('WS_ENDPOINT', `https://${wsApi.apiId}.execute-api.${this.region}.amazonaws.com/prod`);
+
+    new cdk.CfnOutput(this, 'WebSocketUrl', {
+      value: `wss://${wsApi.apiId}.execute-api.${this.region}.amazonaws.com/prod`,
+      description: 'WebSocket URL for real-time state sync notifications',
     });
 
     new cdk.CfnOutput(this, 'DistributionDomainName', {

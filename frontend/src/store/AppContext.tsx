@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react'
 import { evaluateProposal as callEvaluationService, EvaluationResult } from '../services/evaluationService'
+import { connectEventBus, disconnectEventBus, readSharedState, writeSharedState, isSyncEnabled } from '../services/stateSync'
 
 // --- Types ---
 
@@ -500,10 +501,36 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<AppState>(loadState)
   const [evaluatingProposals, setEvaluatingProposals] = useState<Set<string>>(new Set())
 
-  // Persist on every change
+  // Persist on every change — write to localStorage AND S3 (if sync enabled)
   useEffect(() => {
     persistState(state)
+    if (isSyncEnabled()) {
+      writeSharedState(state)
+    }
   }, [state])
+
+  // Connect to WebSocket event bus for cross-browser sync
+  useEffect(() => {
+    if (!isSyncEnabled()) return
+
+    // On initial load, try to read shared state from S3
+    readSharedState<AppState>().then((remote) => {
+      if (remote && remote.solicitations) {
+        setState(remote)
+      }
+    })
+
+    // Subscribe to state changes from other browsers
+    connectEventBus(() => {
+      readSharedState<AppState>().then((remote) => {
+        if (remote && remote.solicitations) {
+          setState(remote)
+        }
+      })
+    })
+
+    return () => disconnectEventBus()
+  }, [])
 
   const switchRole = useCallback((role: 'GOV' | 'VENDOR') => {
     setState(prev => ({ ...prev, currentRole: role }))
