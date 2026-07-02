@@ -1,151 +1,152 @@
-# DC Summit 2026 Global Government Hackathon — Team Repository
+# Federal Payment Processing Platform (FedPay)
+## DC Summit 2026 Global Government Hackathon — Team S2G
 
-Welcome! This is your team's Git repository for the DC Summit 2026 Global Government Hackathon. Use it to build, collaborate on, and submit your hackathon project.
+### Live Demo: https://d2wbk4dmt2edww.cloudfront.net
+### GitHub: https://github.com/s2g1/AWS_Public_Hacks
 
-## How This Repository Works
+---
 
-This repository is hosted on [AWS CodeCommit](https://aws.amazon.com/codecommit/) in your team's AWS account. It was automatically provisioned when your environment was set up, and is **already cloned** to your DCV desktop at:
+## Overview
+
+An AI-powered federal payment processing platform that automates the full acquisition lifecycle — from solicitation through proposal evaluation, contract award, invoice processing, compliance validation, and disbursement. Built with multi-agent AI architecture using Amazon Bedrock, deployed on AWS serverless infrastructure.
+
+---
+
+## Screenshots
+
+### Dashboard
+![Dashboard](docs/images/Dashboard%20page.PNG)
+
+### Solicitations
+![Solicitations](docs/images/solicitations%20page.PNG)
+
+### AI Proposal Evaluation
+![AI Summary](docs/images/AI%20summary.PNG)
+
+### Contracts Management
+![Contracts](docs/images/contracts%20management%20page.PNG)
+
+### History / Audit Trail
+![History](docs/images/history%20page.PNG)
+
+---
+
+## Architecture
 
 ```
-C:\Users\participant\workshop
+┌─────────────────────────────────────────────────────────────┐
+│                    PRESENTATION LAYER                         │
+│  React SPA (CloudFront) ←→ Lambda Function URLs              │
+└──────────────────────────────┬──────────────────────────────┘
+                               │
+┌──────────────────────────────┼──────────────────────────────┐
+│                    AI / ORCHESTRATION LAYER                   │
+│  Amazon Bedrock (Nova Pro / Claude Sonnet 4.6)               │
+│  AWS Step Functions (Payment Pipeline)                        │
+│  WebSocket API Gateway (Real-time Event Bus)                 │
+│  ┌─────────┐ ┌──────────┐ ┌──────────┐ ┌────────┐ ┌──────┐ │
+│  │Extract  │→│Validate  │→│Compliance│→│Route   │→│Disburse│ │
+│  │Agent    │ │Agent     │ │Agent     │ │Agent   │ │Agent  │ │
+│  └─────────┘ └──────────┘ └──────────┘ └────────┘ └──────┘ │
+└──────────────────────────────┬──────────────────────────────┘
+                               │
+┌──────────────────────────────┼──────────────────────────────┐
+│                    DATA LAYER                                 │
+│  DynamoDB (Payments, Contracts, CLINs, REAs, WS Connections) │
+│  S3 (Documents, Shared State, Frontend Assets)               │
+└─────────────────────────────────────────────────────────────┘
 ```
 
-Kiro opens this folder by default when you launch it.
+---
 
-### Connection to CodeCommit
+## Key Features
 
-The repository authenticates via [git-remote-codecommit](https://docs.aws.amazon.com/codecommit/latest/userguide/setting-up-git-remote-codecommit.html), which uses your instance's AWS credentials — **no additional Git credential setup is required**. You can push and pull using standard Git commands immediately.
+- **5 Specialized AI Agents** — Extraction, Validation, Compliance, Routing, Disbursement
+- **Real AI Evaluation** — Amazon Bedrock evaluates proposals against SOW in real-time
+- **Multi-Browser Sync** — WebSocket event bus propagates state between GOV and VENDOR browsers
+- **Payment Pipeline** — Per-contract visual step-by-step disbursement tracking
+- **SBIR Lifecycle** — Full Phase I → Phase II → Phase III option management
+- **Role-Based Access** — GOV/VENDOR views with vendor isolation
+- **Contract Modifications** — REA, ECP, and Government-initiated mods
+- **In-App Chatbot** — Pattern-matched assistant with data reset command
 
-The CodeCommit HTTPS clone URL is also available in the Workshop Studio **Event Outputs** panel (look for `CodeCommitUrl`) if you need to clone the repo elsewhere.
+---
 
-## Getting Started
+## Tech Stack
 
-Open **PowerShell** or the **Kiro terminal** and start building:
+| Layer | Technology |
+|-------|-----------|
+| Frontend | React 18, TypeScript, Tailwind CSS, Vite |
+| Backend (Agents) | Go 1.21 |
+| AI/ML | Amazon Bedrock (Nova Pro, Claude Sonnet 4.6) |
+| Infrastructure | AWS CDK (TypeScript) |
+| Database | Amazon DynamoDB |
+| Storage | Amazon S3 |
+| CDN | Amazon CloudFront |
+| Real-time | API Gateway WebSocket |
+| Serverless | AWS Lambda (Go) |
+| Testing | Property-based (rapid), Vitest |
+
+---
+
+## Deployment
 
 ```powershell
-cd C:\Users\participant\workshop
+# Build frontend
+cd frontend && npm run build
 
-# Check current status
-git status
+# Build Lambdas
+$env:GOOS="linux"; $env:GOARCH="amd64"; $env:CGO_ENABLED="0"
+cd lambda/evaluate-proposal && go build -o dist/bootstrap .
+cd ../state-sync && go build -o dist/bootstrap .
+cd ../ws-connect && go build -o dist/bootstrap .
 
-# Create a branch for your feature
-git checkout -b feature/my-awesome-idea
-
-# Make changes, then stage and commit
-git add .
-git commit -m "Initial project structure"
-
-# Push to CodeCommit
-git push origin feature/my-awesome-idea
+# Deploy infrastructure
+cd infra && npx cdk deploy --require-approval never
 ```
-
-### Suggested Workflow
-
-1. **Create a feature branch** — Keep `main` clean; do your work on feature branches.
-2. **Commit often** — Small, frequent commits make it easier to track progress and recover from mistakes.
-3. **Push regularly** — Your code is only saved to CodeCommit when you push. Don't lose work!
-4. **Merge to main** when your feature is ready:
-   ```powershell
-   git checkout main
-   git merge feature/my-awesome-idea
-   git push origin main
-   ```
-
-## Tools Available on Your Desktop
-
-Your DCV instance comes pre-loaded with everything you need:
-
-| Tool | Purpose |
-|------|---------|
-| **Kiro** | AI-powered IDE — spec-driven development, autopilot, hooks |
-| **Amazon Quick** | AI work assistant — research, apps, flows, documentation |
-| **AWS CLI v2** | Interact with AWS services from the command line |
-| **AWS CDK** | Infrastructure as code (TypeScript, Python, Java, .NET, Go) |
-| **Python 3.12+** | Python runtime with pip |
-| **Node.js 22 + npm** | JavaScript/TypeScript runtime |
-| **Java 17 & 21 (Corretto)** | Java runtime with Maven |
-| **Go** | Go programming language |
-| **.NET 8 SDK** | .NET runtime and SDK |
-| **Docker Desktop** | Container runtime |
-| **Git** | Version control (this repo!) |
-
-## AWS Services
-
-Your account includes access to a broad set of AWS services. Highlights:
-
-- **Amazon Bedrock** — Foundation models (Claude Sonnet 4.6, Nova Pro, Nova Canvas, Titan Embeddings), Agents, Knowledge Bases, AgentCore
-- **AWS Lambda** — Serverless compute
-- **Amazon ECS / EKS** — Container orchestration
-- **Amazon S3 / DynamoDB** — Storage and databases
-- **AWS Step Functions** — Workflow orchestration
-- **Amazon SageMaker** — ML notebook instances
-
-See the workshop guide for the full list of available services and permissions.
-
-## Need Help?
-
-- **Workshop guide**: Available at the Workshop Studio URL provided by your facilitator
-- **AWS credentials expired?** Go to Workshop Studio → *Get AWS CLI credentials* and set fresh ones in PowerShell
-- **Git issues?** Make sure your AWS environment variables are set (credentials are needed for `git-remote-codecommit`)
 
 ---
 
-Good luck and happy building! 🚀
+## Documentation
+
+| Document | Path |
+|----------|------|
+| Software Development Plan | `docs/SDP-Software-Development-Plan.md` |
+| Architecture Design Document | `docs/ADD-Architecture-Design-Document.md` |
+| Version Description Document | `docs/VDD-Version-Description-Document.md` |
+| Interface Specification | `docs/ISA-Interface-Specification-Agreement.md` |
+| PPSM (Security) | `docs/PPSM-Program-Protection-Security-Management.md` |
+| STIG Compliance | `docs/STIG-Compliance-Report.md` |
+| CMMI Compliance | `docs/CMMI-Process-Compliance.md` |
+| User Manual | `docs/USER-MANUAL.md` |
+| Presentation Datasheet | `PRESENTATION_DATASHEET.md` |
+| Demo Script | `DEMO_SCRIPT.md` |
+
+### Reference Documents
+| Document | Path |
+|----------|------|
+| DARPA RFP (W15QKN-25-R-0042) | `docs/reference/RFP-W15QKN-25-R-0042.md` |
+| S2G Proposal & BOE | `docs/reference/S2G-Proposal-BOE-W15QKN-25-R-0042.md` |
+| S2G Invoice #001 | `docs/reference/S2G-Invoice-001-W15QKN-25-R-0042.md` |
 
 ---
 
-## For Workshop Developers / Facilitators
+## Demo Instructions
 
-> This section documents how this repository's contents are packaged and deployed into participant CodeCommit repositories. Participants can ignore this.
+1. Open https://d2wbk4dmt2edww.cloudfront.net in two browsers
+2. Browser 1: Set to **GOV** (Contracting Officer)
+3. Browser 2: Set to **VENDOR** (Nexus AI Solutions LLC)
+4. Type `reset` in the chatbot to initialize shared state
+5. Walk through: Solicitation → Proposal → AI Eval → Award → Invoice → Disburse
 
-### How CodeCommit Gets Populated
+---
 
-The contents of the `code/workshop/` directory in the workshop source repository are:
+## Team
 
-1. **Zipped** into `assets/project.zip`
-2. **Uploaded to S3** (either Workshop Studio's managed bucket or a test bucket)
-3. **Loaded into CodeCommit** by the CloudFormation template (`static/cloudformation/codecommit.yaml`) which references the S3 bucket/key for initial repository content
+**S2G Technologies** — DC Summit 2026 Global Government Hackathon
 
-### Regenerating the Zip
+---
 
-After making changes to `code/workshop/`, regenerate the asset zip with:
+## AWS Services Used
 
-```bash
-# Package assets locally (without uploading to S3)
-bash scripts/workshop-studio/update-assets.sh --no-sync
-
-# Package and upload to Workshop Studio's S3 bucket
-bash scripts/workshop-studio/update-assets.sh
-
-# Dry run — see what would happen without doing anything
-bash scripts/workshop-studio/update-assets.sh --dry-run
-```
-
-This runs the `update-assets.sh` script which zips `code/workshop/` → `assets/project.zip` and syncs the `assets/` directory to S3.
-
-> **Important:** After uploading via Workshop Studio, the assets are only available once a **commit is pushed** to the workshop repository.
-
-### For Standalone / Isengard Testing
-
-If you're testing outside Workshop Studio (e.g., in an Isengard account), use the standalone upload script instead:
-
-```bash
-# Creates a private S3 bucket and uploads assets
-bash scripts/standalone/upload-test-assets.sh
-
-# Use an existing bucket
-bash scripts/standalone/upload-test-assets.sh --bucket my-bucket
-
-# Clean up
-bash scripts/standalone/upload-test-assets.sh --delete
-```
-
-Then deploy the CloudFormation stack with:
-```bash
-aws cloudformation deploy \
-  --template-file static/cloudformation/codecommit.yaml \
-  --stack-name hackathon-codecommit \
-  --parameter-overrides \
-    S3CodeBucket=<bucket-name> \
-    S3CodeKey=<prefix>/project.zip
-```
+CloudFront, S3, Lambda, DynamoDB, API Gateway (WebSocket), Bedrock, Step Functions, IAM, CloudWatch, CDK
